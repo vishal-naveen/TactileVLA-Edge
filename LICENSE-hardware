@@ -1,0 +1,8 @@
+Hardware designs in `hardware/` (CAD, STLs, PCB sources, BOMs) are licensed under
+CERN Open Hardware Licence Version 2 - Permissive (CERN-OHL-P v2).
+
+Full text: https://cern.ch/cern-ohl
+
+Copyright 2026 Vishal Naveen
+
+Code in `software/` and `firmware/` is licensed separately under Apache-2.0 (see LICENSE).

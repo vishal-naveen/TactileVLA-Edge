@@ -1,0 +1,40 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Secrets ---
+.env
+.env.local
+*.pem
+*.key
+
+# --- Data / models / outputs (never commit; use HF Hub) ---
+outputs/
+checkpoints/
+wandb/
+*.ckpt
+*.safetensors
+*.mp4
+*.parquet
+data/
+datasets/
+
+# --- Calibration (machine-specific, lives in ~/.cache) ---
+calibration/
+*.calib.json
+
+# --- OS / editor ---
+.DS_Store
+.idea/
+.vscode/
+
+# --- Internal strategy docs (see docs/README.md) ---
+_private/
+*_Reference*.pdf
+*_Handoff.md
