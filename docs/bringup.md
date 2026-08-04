@@ -5,6 +5,31 @@ Getting from two arms in a box to the leader arm driving the follower in real ti
 > **Read the electrical section first.** One mistake here destroys six servos and is not
 > recoverable.
 
+## Checklist
+
+- [ ] Both power supplies identified and labeled (12V follower / 5V leader)
+- [ ] Both arms clamped to the table
+- [ ] Both serial ports found
+- [ ] Follower calibrated (`follower_01`)
+- [ ] Leader calibrated (`leader_01`)
+- [ ] Teleoperation working — leader mirrors follower in real time
+- [ ] Cameras found and framed (only needed before recording data)
+
+## 0. Mount the arms
+
+Each arm gets 2 table clamps (4 total for leader + follower). The clamp is tool-free: its
+geometry matches the base plate's contours and aligns with two pins molded into the base.
+
+1. Slide the base plate to the table edge — the cutouts are shaped to receive the clamps.
+2. Slot each clamp in from underneath so it straddles the table edge.
+3. Hand-tighten the thumbscrew until the base doesn't move laterally or vertically.
+
+If a clamp doesn't seat fully (table edge too thick, an odd lip, etc.), stop and fix that before
+powering on — a half-seated clamp is how an arm ends up on the floor mid-motion. Leave more space
+between the two arms than looks necessary; folded-up reach is smaller than swung-out reach, and
+you don't want a collision on the first teleop test. Leave slack in the USB and power cables at
+the clamp so arm motion doesn't tug on the boards.
+
 ## Electrical safety
 
 The SO-ARM101 Pro kit ships **two power supplies at different voltages**:
