@@ -68,8 +68,12 @@ installed — uninstall and repeat with the index URL.
 git clone https://github.com/vishal-naveen/lerobot.git ~/lerobot
 cd ~/lerobot
 git checkout d7ea6f3bd84fa7754cbcdc13a0b023fc2eaa063c
-pip install -e ".[feetech,smolvla]"
+pip install -e ".[feetech,smolvla,training]"
 ```
+
+The `training` extra is required, not optional: `lerobot-train` calls
+`require_package("accelerate")` and aborts immediately without it. Installing only
+`[feetech,smolvla]` gets you all the way to launching a run before it fails.
 
 ## 5. torchcodec must match the installed torch
 
