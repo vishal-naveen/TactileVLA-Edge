@@ -23,8 +23,10 @@ CUDA under WSL2 needs the driver installed on **Windows**, not inside WSL:
 nvidia-smi
 ```
 
-This must list the RTX 3060 Ti. If it does not, stop here and fix the driver — nothing
-below will work without it.
+This must list the GPU (an RTX 3060 on this machine) along with its driver version and
+total memory. If it does not appear at all, stop here and fix the driver — nothing below
+will work without it. Note the reported VRAM: it, rather than the model name, determines
+which policies fit.
 
 ## 1. Miniforge
 
@@ -152,9 +154,10 @@ lerobot-train \
   --policy.push_to_hub=false
 ```
 
-For SmolVLA, 8 GB of VRAM is below the 10-16 GB LeRobot lists as comfortable. Reduce
-`--batch_size` and keep `freeze_vision_encoder=true` (the default), or use gradient
-accumulation to recover the effective batch size.
+For SmolVLA, 12 GB sits at the low end of the 10-16 GB LeRobot lists as comfortable.
+Start around `--batch_size=4` and adjust from there. On out-of-memory, lower the batch
+first; gradient accumulation recovers the effective batch size, and keeping
+`freeze_vision_encoder=true` (the default) saves more.
 
 ## Notes on this GPU
 
