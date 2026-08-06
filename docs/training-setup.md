@@ -1,4 +1,4 @@
-# Training machine setup (RTX 3060 Ti, Windows + WSL2)
+# Training machine setup (RTX 3060 12GB, Windows + WSL2)
 
 Recording and teleoperation run on the Mac. Training runs here, on the GPU box.
 
@@ -158,15 +158,16 @@ accumulation to recover the effective batch size.
 
 ## Notes on this GPU
 
-The RTX 3060 **Ti** has **8 GB** of VRAM — less than the plain RTX 3060's 12 GB,
-despite being the faster card. VRAM, not compute, is the binding constraint for these
-policies:
+Confirmed on this machine: **RTX 3060 with 12 GB**. Worth stating explicitly because
+the faster RTX 3060 **Ti** has only **8 GB** — the name suggests an upgrade but the
+VRAM is smaller, and VRAM is the binding constraint for these policies, not compute.
 
-| Policy | VRAM at batch 8 | 8 GB verdict |
+| Policy | VRAM at batch 8 | 12 GB verdict |
 |---|---|---|
 | ACT | ~2-6 GB | Comfortable |
-| SmolVLA | ~10-16 GB | Tight; needs a smaller batch |
-| Diffusion | ~8-14 GB | Borderline |
+| Diffusion | ~8-14 GB | Workable |
+| SmolVLA | ~10-16 GB | Plausible at a modest batch; tune down on OOM |
+| pi0 / pi05 | ~24-40 GB | Not feasible |
 
 ## Troubleshooting
 

@@ -6,8 +6,10 @@ on that machine. A human reading it will also be fine.
 
 ## Context you need
 
-- **This machine's job:** training robot-learning policies on an **NVIDIA RTX 3060 Ti
-  (8 GB VRAM)**. It does *not* touch the robot arms — those stay on a separate Mac.
+- **This machine's job:** training robot-learning policies on an **NVIDIA RTX 3060
+  (12 GB VRAM)**. It does *not* touch the robot arms — those stay on a separate Mac.
+  If the GPU turns out to be a different model, that is fine — record what it actually
+  is and consult the VRAM table near the end, since VRAM decides which policies fit.
 - **Environment:** Windows with **WSL2**. Every command below runs *inside* WSL, not
   in PowerShell, unless a step explicitly says otherwise.
 - **What is being installed:** [LeRobot](https://github.com/huggingface/lerobot), a
@@ -35,9 +37,16 @@ on that machine. A human reading it will also be fine.
 nvidia-smi
 ```
 
-**Expected:** a table listing `NVIDIA GeForce RTX 3060 Ti`.
+**Expected:** a table listing an NVIDIA GPU, with a driver version and total memory.
+Record the exact model and VRAM — later steps depend on VRAM, not on the model name.
+The card is expected to be an RTX 3060 (12 GB), but any CUDA-capable NVIDIA GPU passes
+this gate; a different model is a note to make, not a reason to stop.
 
-**If it fails:** the fix is on the **Windows** side, not in WSL. A current NVIDIA Game
+Also check the **utilization** column while you are here. If the GPU is already busy
+(high `%` and several GB allocated by something else), say so — it will not block setup
+but it will slow any training, and step 7 would contend with it.
+
+**If `nvidia-smi` is missing or errors:** the fix is on the **Windows** side, not in WSL. A current NVIDIA Game
 Ready or Studio driver installed on Windows provides WSL2 CUDA passthrough
 automatically. Installing a *Linux* NVIDIA driver inside WSL **breaks** this and must
 be avoided. Report this and stop — nothing downstream can work without it.
@@ -166,7 +175,8 @@ PY
 ```
 
 **Expected:** `lerobot 0.5.2`, `cuda: True`, a torchcodec version, an accelerate
-version, and the GPU named as an RTX 3060 Ti. Report the full output.
+version, and a named GPU (not `NONE`). Report the full output verbatim, including
+whichever GPU is reported.
 
 ## Step 7 — Confirm a real training run starts
 
@@ -217,32 +227,35 @@ lerobot-train \
 ```
 
 ```bash
-# SmolVLA - 8 GB is BELOW the 10-16 GB LeRobot lists as comfortable.
-# Keep the vision encoder frozen (the default) and use a small batch.
+# SmolVLA - 12 GB sits at the low end of the 10-16 GB LeRobot lists as comfortable.
+# Start at batch 4 and raise it if VRAM allows; drop it on out-of-memory.
 lerobot-train \
   --policy.path=lerobot/smolvla_base \
   --dataset.repo_id=<username>/<dataset> \
   --policy.device=cuda \
   --output_dir=outputs/train/smolvla_run --job_name=smolvla_run \
-  --batch_size=2 --steps=5000 --save_freq=1000 --log_freq=100 \
+  --batch_size=4 --steps=5000 --save_freq=1000 --log_freq=100 \
   --wandb.enable=false --policy.push_to_hub=false
 ```
 
 On CUDA out-of-memory: lower `--batch_size` first. Gradient accumulation can recover
 the effective batch size; SmolVLA's SigLIP vision tower uses LayerNorm rather than
-BatchNorm, so accumulation is close to equivalent to a true larger batch.
+BatchNorm, so accumulation is close to equivalent to a true larger batch. Keeping
+`freeze_vision_encoder=true` (the default) also saves memory, at the cost of not
+adapting the visual features to this setup's cameras.
 
 ## Reference: VRAM by policy
 
-The RTX 3060 **Ti** has **8 GB** — less than the plain RTX 3060's 12 GB, despite being
-the faster card. VRAM, not compute, is the binding constraint here.
+VRAM, not compute, is the binding constraint for these policies. Note that the RTX 3060
+has **12 GB** while the faster 3060 **Ti** has only 8 GB — confirm which card is
+actually installed (GATE 0) rather than assuming from the name.
 
-| Policy | VRAM at batch 8 | 8 GB verdict |
-|---|---|---|
-| ACT | ~2-6 GB | Comfortable |
-| Diffusion | ~8-14 GB | Borderline |
-| SmolVLA | ~10-16 GB | Tight - reduce batch |
-| pi0 / pi05 | ~24-40 GB | Not feasible |
+| Policy | VRAM at batch 8 | 12 GB verdict | 8 GB verdict |
+|---|---|---|---|
+| ACT | ~2-6 GB | Comfortable | Comfortable |
+| Diffusion | ~8-14 GB | Workable | Borderline |
+| SmolVLA | ~10-16 GB | Plausible; tune batch | Tight - reduce batch |
+| pi0 / pi05 | ~24-40 GB | Not feasible | Not feasible |
 
 ## Troubleshooting summary
 
