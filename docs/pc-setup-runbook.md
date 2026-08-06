@@ -217,7 +217,7 @@ Not part of setup — for later use.
 5,000 steps. Using the default would train ~130 epochs and waste hours overfitting.
 
 ```bash
-# ACT - comfortable on 8 GB
+# ACT - comfortable on 12 GB
 lerobot-train \
   --dataset.repo_id=<username>/<dataset> \
   --policy.type=act --policy.device=cuda \
@@ -266,4 +266,4 @@ actually installed (GATE 0) rather than assuming from the name.
 | `Could not load this library: libtorchcodec_core*` | torchcodec/torch ABI mismatch |
 | `'accelerate' is required but not installed` | Missing the `training` extra |
 | Dataset refuses to load | LeRobot version differs from the recording machine's |
-| CUDA out of memory | Batch too large for 8 GB |
+| CUDA out of memory | Batch too large for the available VRAM |
