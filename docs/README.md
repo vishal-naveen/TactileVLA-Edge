@@ -5,8 +5,12 @@ Organized along [Diataxis](https://diataxis.fr) lines:
 | Path | Kind | Contents |
 |---|---|---|
 | `bringup.md` | Tutorial | First-time SO-101 bring-up, start to teleoperation |
+| `recording-protocol.md` | How-to | Collecting a dataset that generalizes across object positions |
+| `training-setup.md` | How-to | Training machine setup (Windows + WSL2, RTX 3060) |
+| `pc-setup-runbook.md` | How-to | The same setup as an agent-executable runbook with hard gates |
 | `adr/` | Explanation | Architecture decision records, numbered, never renumbered |
 | `log/` | Reference | Dated engineering log entries |
+| `../software/tools/` | Reference | Session scripts, and the failure modes they encode |
 
 Docs are reviewed in the same PR as the code they describe.
 

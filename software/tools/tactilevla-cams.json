@@ -1,0 +1,14 @@
+{
+  "_comment": "SINGLE SOURCE OF TRUTH for camera role -> index + resolution. Every tactilevla script reads this file, so when macOS renumbers the cameras you change ONE number here instead of six scripts. Verified 2026-08-06: the indices swapped between the noodle10 recording (cam 0 was overhead) and now (cam 1 is overhead). Resolution follows the ROLE, not the index: the overhead camera needs the detail because it frames the whole workspace.",
+  "_verify": "python3 ~/tactilevla-camview.py  -- the window labelled 'top' must show the table from above, 'wrist' must show the gripper.",
+  "top": {
+    "index": 1,
+    "width": 800,
+    "height": 600
+  },
+  "wrist": {
+    "index": 0,
+    "width": 640,
+    "height": 480
+  }
+}
