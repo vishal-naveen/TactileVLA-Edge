@@ -258,6 +258,11 @@ CAMERAS="{ top: {type: opencv, index_or_path: $TOP_CAM, width: $TOP_W, height: $
 # exactly as truncated, so end episodes deliberately rather than letting them expire.
 EPISODE_TIME="${EPISODE_TIME:-30}"
 RESET_TIME="${RESET_TIME:-25}"
+# One-off staging pause before the FIRST episode of a run. lerobot-record otherwise
+# starts capturing the moment the leader connects, so episode 1 of every round caught
+# the object being placed and the arm being driven to home. Teleop is live and nothing
+# is recorded; [->] ends it early, so a generous limit costs nothing.
+START_SETUP="${START_SETUP:-45}"
 
 LOG_DIR="$HOME/tactilevla-logs"
 mkdir -p "$LOG_DIR"
@@ -280,6 +285,23 @@ LOG="$LOG_DIR/${DATASET_NAME}-record.log"
 CELL_PLAN="${CELL_PLAN:-A1,A2,A3,B3,C3,C2,C1,B1}"
 EPISODES_PER_CELL="${EPISODES_PER_CELL:-5}"
 CELL_LOG="$LOG_DIR/${DATASET_NAME}-cells.csv"
+
+# Object rotation per episode, spanning -90..+90 deg. That full 180 deg is the whole
+# space that matters for an elongated object: the graspable long axis has a 180 deg
+# period, so +100 presents the same axis as -80. A narrower sweep leaves orientations
+# the policy has never seen, and ACT does not extrapolate them.
+#
+# Indexed by how many episodes the CELL has had (round * per_cell + take), NOT by take,
+# so all 20 values get used across 4 rounds -> 20 distinct orientations per cell at
+# 10 deg spacing, instead of 5 angles repeated four times.
+#
+# ORDER IS DELIBERATELY INTERLEAVED, not monotonic. Read five at a time:
+#   round 1: -90 -50 -10 +30 +70      round 3: -70 -30 +10 +50 +90
+#   round 2: -80 -40   0 +40 +80      round 4: -60 -20 +20 +60   0
+# Every round spans the full range. Sorted order would give round 1 only steep
+# negative angles, aliasing orientation with the round - and would leave a dataset
+# that is useless if you had to stop after one round.
+CELL_ROTATIONS="${CELL_ROTATIONS:--90,-50,-10,+30,+70,-80,-40,0,+40,+80,-70,-30,+10,+50,+90,-60,-20,+20,+60,0}"
 
 # Register the session on creation, snapshotting the camera and grid config it was
 # recorded under. Later mismatches (a camera renumbering, a re-clicked grid) then
@@ -394,7 +416,9 @@ VCODEC_ARG=""
 PYTHONUNBUFFERED=1 \
 TACTILEVLA_CELL_PLAN="$CELL_PLAN" \
 TACTILEVLA_EPISODES_PER_CELL="$EPISODES_PER_CELL" \
+TACTILEVLA_ROTATIONS="$CELL_ROTATIONS" \
 TACTILEVLA_CELL_LOG="$CELL_LOG" \
+TACTILEVLA_START_SETUP_S="$START_SETUP" \
 $CAFFEINATE lerobot-record \
   $RESUME_ARG \
   $VCODEC_ARG \
