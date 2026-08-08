@@ -263,6 +263,24 @@ LOG_DIR="$HOME/tactilevla-logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/${DATASET_NAME}-record.log"
 
+# Cell staging plan. lerobot-record prints the cell to stage in the SETUP banner
+# (look-ahead, which is when you actually place the object) and confirms it in the
+# RECORDING banner, then appends episode -> cell to CELL_LOG.
+#
+# The order is the perimeter of the 3x3 grid, counter-clockwise from A1, with the
+# centre cell B2 left out as the hold-out:
+#
+#         A       B       C
+#  far  [A1] <- [B1] <-  [C1]        A1 -> A2 -> A3 -> B3 -> C3 -> C2 -> C1 -> B1
+#       [A2]    [B2]*    [C2]  ^     * B2 = hold-out, record NOTHING here
+#  near [A3] -> [B3] ->  [C3]  |
+#
+# Indexing is off the dataset episode count, so it keeps its place across resume,
+# and every second round of 40 is walked in the opposite direction automatically.
+CELL_PLAN="${CELL_PLAN:-A1,A2,A3,B3,C3,C2,C1,B1}"
+EPISODES_PER_CELL="${EPISODES_PER_CELL:-5}"
+CELL_LOG="$LOG_DIR/${DATASET_NAME}-cells.csv"
+
 # Register the session on creation, snapshotting the camera and grid config it was
 # recorded under. Later mismatches (a camera renumbering, a re-clicked grid) then
 # show up as a diff against this record instead of being invisible.
@@ -341,6 +359,8 @@ echo "episodes: $NUM_EPISODES"
 echo "task    : $TASK_DESC"
 echo "cameras : top ${TOP_W}x${TOP_H} (cam $TOP_CAM), wrist ${WRIST_W}x${WRIST_H} (cam $WRIST_CAM)"
 echo "log     : $LOG"
+echo "cells   : $CELL_PLAN  ($EPISODES_PER_CELL each, reversed every $(( EPISODES_PER_CELL * $(echo "$CELL_PLAN" | tr ',' '\n' | grep -c .) )) episodes)"
+echo "cell log: $CELL_LOG"
 echo
 echo "Reminder: watch ONLY the camera feeds while teleoperating, never the arm itself."
 echo
@@ -371,7 +391,11 @@ VCODEC_ARG=""
 # once when the process exits. That includes the confirmation for the key that
 # discards a take. logging (stderr) is unaffected either way.
 # shellcheck disable=SC2086  # CAFFEINATE, RESUME_ARG and VCODEC_ARG are intentionally unquoted
-PYTHONUNBUFFERED=1 $CAFFEINATE lerobot-record \
+PYTHONUNBUFFERED=1 \
+TACTILEVLA_CELL_PLAN="$CELL_PLAN" \
+TACTILEVLA_EPISODES_PER_CELL="$EPISODES_PER_CELL" \
+TACTILEVLA_CELL_LOG="$CELL_LOG" \
+$CAFFEINATE lerobot-record \
   $RESUME_ARG \
   $VCODEC_ARG \
   --robot.type=so101_follower \
