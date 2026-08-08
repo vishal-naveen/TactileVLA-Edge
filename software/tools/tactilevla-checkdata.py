@@ -268,7 +268,16 @@ def main() -> int:
         warmup, mid, reset = parse_slow_steps(log_text)
         n_episodes = max(len(lengths), 1)
         mid_frac = len(mid) / max(len(df), 1)
-        if not warmup and not mid and not reset:
+        # "held 30 Hz" is only meaningful if the log actually captured the run. On an
+        # empty or partial log the absence of warnings is absence of evidence, and
+        # printing the reassuring line above the FAIL is exactly how a skim of this
+        # output produced a false all-clear once already.
+        if n_starts < len(lengths):
+            print(
+                f"loop rate: NOT VERIFIED - {log_path.name} covers {n_starts} of "
+                f"{len(lengths)} episodes, so silence here means nothing"
+            )
+        elif not warmup and not mid and not reset:
             print(f"loop rate: held {fps} Hz - no slow-loop warnings in {log_path.name}")
         else:
             if warmup:
