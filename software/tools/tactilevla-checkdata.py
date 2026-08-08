@@ -54,6 +54,14 @@ SLOW_LOOP_RE = re.compile(
 EPISODE_START_RE = re.compile(
     r"^\w+\s+(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*Recording episode (\d+)"
 )
+# The reset ("setup") phase between episodes runs its own record_loop, but that
+# call passes no dataset= argument (lerobot_record.py:502-513), so nothing it
+# does is written. A slow step there costs NOTHING - it happens while you are
+# repositioning the object. Without this marker every stall during setup was
+# attributed to the episode and failed a good dataset.
+RESET_START_RE = re.compile(
+    r"^\w+\s+(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*Reset the environment"
+)
 # The streaming AV1 encoder DROPS a frame when its queue is full rather than
 # blocking (datasets/video_utils.py, feed_frame: `except queue.Full`). No
 # exception is raised, but the parquet row for that step is still written - so
@@ -63,34 +71,47 @@ EPISODE_START_RE = re.compile(
 DROPPED_FRAME_RE = re.compile(r"Encoder queue full for (\S+), dropped (\d+) frame")
 
 
-def parse_slow_steps(log_text: str) -> tuple[list[float], list[float]]:
-    """Split slow-loop warnings into (warm-up, mid-episode) rates.
+def parse_slow_steps(log_text: str) -> tuple[list[float], list[float], list[float]]:
+    """Split slow-loop warnings into (warm-up, mid-episode, reset-phase) rates.
 
-    Attribution is by log timestamp against the preceding "Recording episode N"
-    line. LeRobot logs at one-second resolution, so a genuine stall inside the
-    first WARMUP_WINDOW_S of an episode is indistinguishable from encoder warm-up
-    and gets excused - acceptable, since nothing meaningful has happened that early.
+    Attribution is by log timestamp against the preceding phase marker:
+    "Recording episode N" opens a recorded phase, "Reset the environment" opens
+    an unrecorded one. Only mid-episode stalls distort the data - warm-up stalls
+    are the encoders spinning up before the operator has moved, and reset-phase
+    stalls are not written at all.
+
+    LeRobot logs at one-second resolution, so a genuine stall inside the first
+    WARMUP_WINDOW_S of an episode is indistinguishable from encoder warm-up and
+    gets excused - acceptable, since nothing meaningful has happened that early.
     """
     fmt = "%Y-%m-%d %H:%M:%S"
     episode_start: datetime | None = None
+    recording = False
     warmup: list[float] = []
     mid: list[float] = []
+    reset: list[float] = []
 
     for line in log_text.splitlines():
         start_match = EPISODE_START_RE.match(line)
         if start_match:
             episode_start = datetime.strptime(start_match.group(1), fmt)
+            recording = True
+            continue
+        if RESET_START_RE.match(line):
+            recording = False
             continue
         slow_match = SLOW_LOOP_RE.match(line)
         if not slow_match:
             continue
         rate = float(slow_match.group(2))
         when = datetime.strptime(slow_match.group(1), fmt)
-        if episode_start is None or (when - episode_start).total_seconds() <= WARMUP_WINDOW_S:
+        if not recording:
+            reset.append(rate)
+        elif episode_start is None or (when - episode_start).total_seconds() <= WARMUP_WINDOW_S:
             warmup.append(rate)
         else:
             mid.append(rate)
-    return warmup, mid
+    return warmup, mid, reset
 
 
 def ffprobe_frame_count(path: Path) -> int | None:
@@ -244,16 +265,21 @@ def main() -> int:
         else:
             print("encoder   : no dropped-frame warnings")
 
-        warmup, mid = parse_slow_steps(log_text)
+        warmup, mid, reset = parse_slow_steps(log_text)
         n_episodes = max(len(lengths), 1)
         mid_frac = len(mid) / max(len(df), 1)
-        if not warmup and not mid:
+        if not warmup and not mid and not reset:
             print(f"loop rate: held {fps} Hz - no slow-loop warnings in {log_path.name}")
         else:
             if warmup:
                 print(
                     f"loop rate: {len(warmup)} slow step(s) at episode start "
                     f"(slowest {min(warmup):.1f} Hz) - encoder warm-up, harmless"
+                )
+            if reset:
+                print(
+                    f"loop rate: {len(reset)} slow step(s) during SETUP "
+                    f"(slowest {min(reset):.1f} Hz) - not recorded, no effect on the data"
                 )
             if mid:
                 print(
