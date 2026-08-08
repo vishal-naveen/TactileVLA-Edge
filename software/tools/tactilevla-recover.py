@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import glob
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -36,8 +37,26 @@ LOCAL_ROOT = Path.home() / ".cache/huggingface/lerobot/local"
 SESSION_FILE = Path.home() / "tactilevla-session.json"
 
 # The recording plan, so a resume can be mapped back to a physical cell.
-BASE_ORDER = ["A1", "B1", "C1", "C2", "C3", "B3", "A3", "A2"]
-EPISODES_PER_CELL = 5
+#
+# Defaults MUST match record.sh's CELL_PLAN / EPISODES_PER_CELL / CELL_ROTATIONS, and
+# the env vars are read so that overriding them in one place cannot desync the two.
+# This file previously hardcoded the old clockwise order and, after the walk was
+# reversed, told the operator to restart at B1 when the correct cell was A2 - which
+# would have quietly corrupted the stratification for two cells.
+BASE_ORDER = [
+    c.strip()
+    for c in os.environ.get("CELL_PLAN", "A1,A2,A3,B3,C3,C2,C1,B1").split(",")
+    if c.strip()
+]
+EPISODES_PER_CELL = int(os.environ.get("EPISODES_PER_CELL", "5") or 5)
+ROTATIONS = [
+    r.strip()
+    for r in os.environ.get(
+        "CELL_ROTATIONS",
+        "-90,-50,-10,+30,+70,-80,-40,0,+40,+80,-70,-30,+10,+50,+90,-60,-20,+20,+60,0",
+    ).split(",")
+    if r.strip()
+]
 CELLS_PER_ROUND = len(BASE_ORDER)
 ROUND_SIZE = EPISODES_PER_CELL * CELLS_PER_ROUND  # 40
 
@@ -45,15 +64,18 @@ W = 66
 rule = "─" * W
 
 
-def cell_for(episode_index: int) -> tuple[str, int, str]:
-    """(cell, round_number, position-in-cell) for a 0-based episode index."""
+def cell_for(episode_index: int) -> tuple[str, int, str, str]:
+    """(cell, round_number, position-in-cell, rotation) for a 0-based episode index."""
     rnd, within = divmod(episode_index, ROUND_SIZE)
     slot, in_cell = divmod(within, EPISODES_PER_CELL)
     # Rounds 2 and 4 walk the perimeter backwards, so that a given cell is not
     # always recorded at the same point in a round (which would re-introduce the
     # drift that rounds exist to average out).
     order = BASE_ORDER if rnd % 2 == 0 else list(reversed(BASE_ORDER))
-    return order[slot], rnd + 1, f"{in_cell + 1} of {EPISODES_PER_CELL}"
+    # Rotation advances with the cell's own episode count, matching
+    # resolve_cell_plan() in lerobot_record.py - NOT with in_cell alone.
+    rotation = ROTATIONS[(rnd * EPISODES_PER_CELL + in_cell) % len(ROTATIONS)] if ROTATIONS else ""
+    return order[slot], rnd + 1, f"{in_cell + 1} of {EPISODES_PER_CELL}", rotation
 
 
 def main() -> int:
@@ -155,9 +177,11 @@ def main() -> int:
         print(rule)
         return 1
 
-    cell, rnd, pos = cell_for(usable)  # usable is a count -> index of the NEXT episode
+    cell, rnd, pos, rot = cell_for(usable)  # usable is a count -> index of the NEXT episode
     done_r, done_c = divmod(usable, ROUND_SIZE)
     print(f"  YOU HAVE {usable} EPISODES. Next one is round {rnd}, cell {cell} ({pos}).")
+    if rot:
+        print(f"  Stage it at cell {cell}, rotated ~{rot} deg.")
     print(f"  ({done_r} full round(s) done, {done_c} episodes into the current one.)")
     print()
     print("  Before resuming, in this order:")
