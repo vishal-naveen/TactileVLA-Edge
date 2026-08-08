@@ -38,3 +38,6 @@ calibration/
 _private/
 *_Reference*.pdf
 *_Handoff.md
+
+# Machine-specific: holds real USB serial numbers. Generate with findports.py --write
+tactilevla-ports.json

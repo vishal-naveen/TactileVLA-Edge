@@ -19,8 +19,25 @@ import cv2
 from lerobot.motors import Motor, MotorNormMode
 from lerobot.motors.feetech import FeetechMotorsBus
 
-FOLLOWER_PORT = "/dev/tty.usbmodem5B7B0154811"
-LEADER_PORT = "/dev/tty.usbmodem5B7B0137031"
+# Ports come from ~/tactilevla-ports.json so a macOS renumbering is one command
+# (`python3 ~/tactilevla-findports.py --write`) instead of a six-file edit.
+PORTS_JSON = Path.home() / "tactilevla-ports.json"
+if not PORTS_JSON.exists():
+    sys.exit(
+        f"Missing {PORTS_JSON}\n"
+        "  Plug in both arms (power bricks first), then:\n"
+        "    python3 ~/tactilevla-findports.py --write"
+    )
+_ports = json.loads(PORTS_JSON.read_text())
+FOLLOWER_PORT = _ports["follower"]["port"]
+LEADER_PORT = _ports["leader"]["port"]
+
+# Present_Voltage is in units of 0.1 V and is the ONLY thing that distinguishes
+# the two arms electrically - they have identical motor IDs (1-6), so connecting
+# to the wrong port succeeds and reads six healthy servos. Asserting the band
+# turns "the operator eyeballed the number" into a hard gate, which is what
+# catches a leader/follower cable swap.
+VOLTAGE_BANDS = {"FOLLOWER": (100, 140), "LEADER": (40, 60)}  # 12 V brick / 5 V brick
 
 # Camera roles, indices and resolutions come from one shared file so a macOS
 # renumbering is a one-line fix instead of six. See ~/tactilevla-cams.json.
@@ -93,6 +110,25 @@ def check_arm(label: str, port: str) -> bool:
             try:
                 values = bus.sync_read(register, normalize=False)
                 print(f"  {register:16s}: {dict(values)}")
+                if register == "Present_Voltage":
+                    lo, hi = VOLTAGE_BANDS[label]
+                    volts = max(values.values())
+                    if not lo <= volts <= hi:
+                        other = "LEADER" if label == "FOLLOWER" else "FOLLOWER"
+                        o_lo, o_hi = VOLTAGE_BANDS[other]
+                        print(
+                            f"  FAIL: {label} should read {lo}-{hi} "
+                            f"({lo / 10:.0f} V brick) but reads {volts} ({volts / 10:.1f} V)."
+                        )
+                        if o_lo <= volts <= o_hi:
+                            print(
+                                f"        That is the {other}'s voltage - the two arms are "
+                                "SWAPPED.\n"
+                                "        Fix with: python3 ~/tactilevla-findports.py --write"
+                            )
+                        else:
+                            print("        Check the power brick and the barrel connector.")
+                        ok = False
             except Exception as exc:
                 print(f"  FAIL reading {register}: {type(exc).__name__}: {exc}")
                 if register == "Present_Load":
@@ -168,7 +204,17 @@ def main() -> int:
     print("=" * 62)
 
     if all(results.values()):
-        print("\nEverything linked. Ready to record.")
+        # The one thing this script CANNOT check. Both cameras support 640x480
+        # and 800x600, so opening index 1 at 800x600 succeeds whichever camera is
+        # physically on index 1 - a swapped pair passes every automated check
+        # here. Only a human looking at the two windows can settle it, and
+        # recording a session with the roles reversed is unrecoverable.
+        print("\nElectrically linked. ONE CHECK LEFT, and it cannot be automated:\n")
+        print("    python3 ~/tactilevla-camview.py")
+        print("\n  The window labelled 'top' must show the TABLE FROM ABOVE.")
+        print("  The window labelled 'wrist' must show the GRIPPER.")
+        print("  If they are swapped, edit ~/tactilevla-cams.json and swap the two")
+        print("  'index' values, then re-run this. Do NOT judge by focus score.")
         return 0
     print("\nSomething is not linked - see failures above.")
     return 1

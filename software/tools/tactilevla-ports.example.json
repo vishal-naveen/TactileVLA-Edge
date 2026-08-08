@@ -1,0 +1,5 @@
+{
+  "_comment": "Copy to ~/tactilevla-ports.json, or just run `python3 tactilevla-findports.py --write` which generates it by probing the arms. Roles are identified by VOLTAGE (follower 12 V ~119, leader 5 V ~49), not by port name, because macOS renumbers /dev/tty.usbmodem* on replug.",
+  "follower": { "port": "/dev/tty.usbmodemXXXXXXXXXXX", "volts": 119 },
+  "leader":   { "port": "/dev/tty.usbmodemYYYYYYYYYYY", "volts": 49 }
+}

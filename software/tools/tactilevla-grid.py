@@ -332,8 +332,16 @@ def main() -> int:
         corners = fresh
         save_corners()
         print(f"Saved layout to {CONFIG}")
-    else:
+    elif not locked:
         # Persist the layout on every run so the file always reflects what was shown.
+        #
+        # LOCKED grids are deliberately NOT re-saved here. save_corners() always
+        # writes `resolution` and `index` from THIS run's live camera measurement,
+        # so a run where the camera opened at an unexpected resolution used to
+        # write that wrong resolution into the locked file - and the mismatch
+        # warning above (which compares stored vs actual) then stopped firing on
+        # every later run, because the stored value had been overwritten to match.
+        # The safety net disarmed itself after one bad run.
         save_corners()
 
     matrix = homography(corners)

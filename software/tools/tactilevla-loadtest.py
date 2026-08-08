@@ -16,13 +16,17 @@ Ctrl-C to stop (torque is released on exit).
 
 from __future__ import annotations
 
+import json
 import sys
+from pathlib import Path
 import time
 
 from lerobot.motors import Motor, MotorNormMode
 from lerobot.motors.feetech import FeetechMotorsBus
 
-FOLLOWER_PORT = "/dev/tty.usbmodem5B7B0154811"
+# Port from ~/tactilevla-ports.json; see ~/tactilevla-findports.py.
+_PORTS = Path.home() / "tactilevla-ports.json"
+FOLLOWER_PORT = json.loads(_PORTS.read_text())["follower"]["port"]
 JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll", "gripper")
 
 DURATION_S = 60

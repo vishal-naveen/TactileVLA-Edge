@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import glob
 import json
+import os
 import re
 import subprocess
 import sys
@@ -53,6 +54,13 @@ SLOW_LOOP_RE = re.compile(
 EPISODE_START_RE = re.compile(
     r"^\w+\s+(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*Recording episode (\d+)"
 )
+# The streaming AV1 encoder DROPS a frame when its queue is full rather than
+# blocking (datasets/video_utils.py, feed_frame: `except queue.Full`). No
+# exception is raised, but the parquet row for that step is still written - so
+# video and parquet desync for the rest of that episode, and the error only
+# surfaces as a decode tolerance failure HOURS into training. The warning is
+# logged at WARNING level (1st, then every 10th), so the record log sees it.
+DROPPED_FRAME_RE = re.compile(r"Encoder queue full for (\S+), dropped (\d+) frame")
 
 
 def parse_slow_steps(log_text: str) -> tuple[list[float], list[float]]:
@@ -181,13 +189,62 @@ def main() -> int:
 
     # 1. Achieved loop rate - only knowable from the recording log.
     log_path = LOG_DIR / f"{root.name}-record.log"
+    allow_no_log = os.environ.get("ALLOW_NO_LOG") == "1"
     if not log_path.exists():
         print(f"loop rate: NO LOG at {log_path}")
         print("  Cannot verify the record loop held its target rate. The dataset's")
         print("  timestamps are nominal (frame_index/fps) and always look perfect.")
         print("  Re-record with ~/tactilevla-record.sh, which tees the console log.")
+        if not allow_no_log:
+            failures.append(
+                f"loop rate: UNVERIFIED - no log at {log_path.name}. "
+                "Re-run with ALLOW_NO_LOG=1 to train anyway."
+            )
     else:
-        warmup, mid = parse_slow_steps(log_path.read_text())
+        log_text = log_path.read_text()
+
+        # POSITIVE CONTROL. Without this the gate cannot tell "no slow-loop
+        # warnings" from "the log captured nothing at all" - and it reported the
+        # strongest possible PASS ("held 30 Hz") against a 418-byte log that held
+        # only an unrelated objc warning. A log that never saw LeRobot's output
+        # is not evidence of a healthy loop; it is the absence of evidence.
+        # Counted per line, like parse_slow_steps: EPISODE_START_RE anchors with
+        # ^, and findall() without re.MULTILINE anchors to the start of the whole
+        # string - it would report 1 for a log with 160 episode-start lines.
+        n_starts = sum(1 for line in log_text.splitlines() if EPISODE_START_RE.match(line))
+        if n_starts == 0:
+            failures.append(
+                f"loop rate: UNVERIFIED - {log_path.name} contains no 'Recording episode' "
+                "lines, so it captured none of lerobot-record's output. The loop rate is "
+                "unknown, NOT known-good. Check that record.sh still tees the console."
+            )
+        elif n_starts < len(lengths):
+            failures.append(
+                f"loop rate: PARTIAL - log has {n_starts} episode-start lines but the "
+                f"dataset has {len(lengths)} episodes. The log is incomplete, so stalls "
+                "in the unlogged episodes would be invisible."
+            )
+        else:
+            print(f"log       : {n_starts} episode-start lines for {len(lengths)} episodes - log is complete")
+
+        # Encoder frame drops -> video/parquet desync. The frame-count check
+        # below catches the consequence; this catches the cause, by name.
+        drops = DROPPED_FRAME_RE.findall(log_text)
+        if drops:
+            worst = {}
+            for cam, count in drops:
+                worst[cam] = max(worst.get(cam, 0), int(count))
+            detail = ", ".join(f"{cam} >= {n}" for cam, n in sorted(worst.items()))
+            failures.append(
+                f"encoder: DROPPED FRAMES ({detail}). The AV1 encoder queue filled and "
+                "frames were discarded while parquet rows were still written - video and "
+                "actions are misaligned. Re-record the affected episodes, and use "
+                "--dataset.camera_encoder.vcodec=auto (hardware encoder) next time."
+            )
+        else:
+            print("encoder   : no dropped-frame warnings")
+
+        warmup, mid = parse_slow_steps(log_text)
         n_episodes = max(len(lengths), 1)
         mid_frac = len(mid) / max(len(df), 1)
         if not warmup and not mid:

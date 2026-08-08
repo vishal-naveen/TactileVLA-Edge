@@ -13,7 +13,10 @@
 # limits the damage from a wild prediction. Raise it only once the policy behaves.
 set -e
 
-FOLLOWER_PORT="/dev/tty.usbmodem5B7B0154811"
+# Port from ~/tactilevla-ports.json (see ~/tactilevla-findports.py). Hardcoding
+# it meant a replug broke six scripts; the config makes it a one-command fix.
+PORTS_LINE="$(bash "$HOME/tactilevla-ports.sh")" || exit 1
+read -r FOLLOWER_PORT _LEADER_PORT <<<"$PORTS_LINE"
 # Indices come from ~/tactilevla-cams.json. This matters for OLD checkpoints too:
 # the policy learned "observation.images.top" = the overhead view, so top must be
 # fed by whichever index is overhead TODAY, not by whichever index was overhead

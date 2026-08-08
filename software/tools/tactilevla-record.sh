@@ -123,8 +123,13 @@ fi
 # window.) If checkdata ever reports MID-EPISODE stalls, closing the extra windows
 # is still the cheapest thing to try, since they do cost some CPU.
 
-FOLLOWER_PORT="/dev/tty.usbmodem5B7B0154811"
-LEADER_PORT="/dev/tty.usbmodem5B7B0137031"
+# Ports come from ~/tactilevla-ports.json, same single-source-of-truth pattern as
+# the cameras. macOS renumbers /dev/tty.usbmodem* on replug; after any replug run
+#   python3 ~/tactilevla-findports.py --write
+# which tells the arms apart by voltage (12 V follower / 5 V leader) rather than
+# by port name, so it is right even when the names have swapped.
+PORTS_LINE="$(bash "$HOME/tactilevla-ports.sh")" || exit 1
+read -r FOLLOWER_PORT LEADER_PORT <<<"$PORTS_LINE"
 
 # --- Cameras ------------------------------------------------------------------
 # Roles, indices and resolutions all come from ~/tactilevla-cams.json so there is
@@ -188,6 +193,50 @@ fi
 # OpenCV to set the codec - it fails with "success=False" and only adds warnings.
 # ------------------------------------------------------------------------------
 
+# On RESUME, check today's camera config against the one snapshotted when the
+# session was created. Rounds 2-4 rebuild CAMERAS from whatever cams.json says at
+# that moment, and macOS has already renumbered these cameras once mid-project.
+# Appending 40 episodes with top/wrist reversed is unrecoverable and invisible:
+# the dataset keys are still called "top" and "wrist", they just contain the
+# wrong views for part of the run. Nothing else compares these, so this is the
+# only place it can be caught.
+if [ "$RESUME" = "resume" ]; then
+  if ! python3 - "$SESSION_FILE" "$CAMS_JSON" <<'PY'
+import json
+import sys
+
+session, cams_path = sys.argv[1], sys.argv[2]
+was = (json.load(open(session)) or {}).get("cameras")
+now = json.load(open(cams_path))
+if was is None:
+    print("  WARNING: session has no camera snapshot (recorded before this check existed).")
+    print("           Confirm roles with `python3 ~/tactilevla-camview.py` before continuing.")
+    sys.exit(0)
+
+fields = ("index", "width", "height")
+diffs = [
+    f"    {role}.{f}: was {was[role][f]} -> now {now[role][f]}"
+    for role in ("top", "wrist")
+    for f in fields
+    if was.get(role, {}).get(f) != now.get(role, {}).get(f)
+]
+if diffs:
+    print("REFUSING TO RESUME - the camera config changed since this session started:")
+    print("\n".join(diffs))
+    print()
+    print("  If macOS renumbered the cameras, fix ~/tactilevla-cams.json so the ROLES")
+    print("  match reality again (verify with `python3 ~/tactilevla-camview.py`), then")
+    print("  resume. The indices only need to match the ROLE, not the old number.")
+    print("  If the change is deliberate, re-snapshot with: FORCE_CAMS=1 <same command>")
+    sys.exit(1)
+print("cameras : match the session snapshot")
+PY
+  then
+    [ "${FORCE_CAMS:-}" = "1" ] || exit 1
+    echo "FORCE_CAMS=1 - continuing despite the camera mismatch."
+  fi
+fi
+
 CAMERAS="{ top: {type: opencv, index_or_path: $TOP_CAM, width: $TOP_W, height: $TOP_H, fps: 30}, wrist: {type: opencv, index_or_path: $WRIST_CAM, width: $WRIST_W, height: $WRIST_H, fps: 30}}"
 
 # Console output is teed to a log because it is the ONLY place the achieved loop
@@ -195,6 +244,21 @@ CAMERAS="{ top: {type: opencv, index_or_path: $TOP_CAM, width: $TOP_W, height: $
 # so it reads as a perfect 33.3 ms even when the loop was actually running at
 # 18 Hz - the drop is invisible in the data and visible only in this log, as
 # "Record loop is running slower (X Hz)". ~/tactilevla-checkdata.py reads it.
+# Time LIMITS, not fixed durations - the right arrow ends either phase early, so a
+# generous limit costs nothing when you are quick and rescues you when you are not.
+#
+# RESET_TIME is the window to drive the arm back to home, reposition the noodle at a
+# new spot in the cell, and set its yaw - then get your hands clear. At 12 s that is
+# tight, and running out does not pause: it drops straight into the next RECORDING
+# episode, so your hands, a half-placed noodle, and an arm not at home all land in
+# the dataset. 25 s is the same session length in practice and removes that cliff.
+#
+# EPISODE_TIME is a safety net; real episodes run ~13 s and you end them with the
+# right arrow. Note that hitting the limit does NOT discard - the episode is saved
+# exactly as truncated, so end episodes deliberately rather than letting them expire.
+EPISODE_TIME="${EPISODE_TIME:-30}"
+RESET_TIME="${RESET_TIME:-25}"
+
 LOG_DIR="$HOME/tactilevla-logs"
 mkdir -p "$LOG_DIR"
 LOG="$LOG_DIR/${DATASET_NAME}-record.log"
@@ -203,6 +267,44 @@ LOG="$LOG_DIR/${DATASET_NAME}-record.log"
 # recorded under. Later mismatches (a camera renumbering, a re-clicked grid) then
 # show up as a diff against this record instead of being invisible.
 if [ "$RESUME" != "resume" ]; then
+  # Starting fresh OVERWRITES the session registry, which is the single pointer
+  # that checkdata / train-act / eval all follow. Typing the round-1 command
+  # again instead of `resume` would mint a new timestamped dataset AND orphan the
+  # episodes already recorded - they stay on disk but nothing points at them
+  # again. The timestamp means there is no filename collision to catch it, so
+  # guard it here.
+  if [ -f "$SESSION_FILE" ]; then
+    PRIOR="$(python3 - "$SESSION_FILE" <<'PY' || true
+import json
+import sys
+from pathlib import Path
+
+s = json.load(open(sys.argv[1]))
+root = Path(s["root"])
+info = root / "meta" / "info.json"
+n = json.loads(info.read_text())["total_episodes"] if info.exists() else 0
+if n:
+    print(f"{s['dataset']}|{n}|{s['created']}")
+PY
+)"
+    if [ -n "$PRIOR" ]; then
+      IFS='|' read -r P_NAME P_EPS P_WHEN <<<"$PRIOR"
+      echo "REFUSING TO START A NEW SESSION - one is already active with real data:"
+      echo "    session : $P_NAME"
+      echo "    episodes: $P_EPS  (created $P_WHEN)"
+      echo
+      echo "  To ADD to it (this is almost always what you want):"
+      echo "    bash ~/tactilevla-record.sh resume $P_NAME 40"
+      echo
+      echo "  To deliberately start a SEPARATE dataset (e.g. the B2 holdout set),"
+      echo "  keeping the one above recoverable:"
+      echo "    FORCE_NEW=1 bash ~/tactilevla-record.sh $BASE_NAME $NUM_EPISODES \"$TASK_DESC\""
+      [ "${FORCE_NEW:-}" = "1" ] || exit 1
+      echo
+      echo "FORCE_NEW=1 - starting a new session. Previous session ID recorded above."
+      cp "$SESSION_FILE" "${SESSION_FILE%.json}.prev-$(date +%Y%m%d_%H%M).json"
+    fi
+  fi
   python3 - "$SESSION_FILE" "$DATASET_NAME" "$TASK_DESC" "$DATASET_ROOT" <<'PY'
 import json
 import sys
@@ -250,9 +352,28 @@ set -o pipefail
 CAFFEINATE=""
 command -v caffeinate >/dev/null 2>&1 && CAFFEINATE="caffeinate -is"
 
-# shellcheck disable=SC2086  # CAFFEINATE and RESUME_ARG are intentionally unquoted
-$CAFFEINATE lerobot-record \
+# Video codec. The default (libsvtav1, software AV1) is CPU-heavy, and when the
+# encoder queue fills LeRobot DROPS the frame instead of blocking - no exception,
+# but the parquet row is still written, so video and actions desync for the rest
+# of that episode and it only surfaces as a decode error hours into training.
+# VCODEC=auto picks h264_videotoolbox (Apple Silicon hardware encoder), which
+# removes that whole failure mode at the cost of larger files - irrelevant at
+# ~1 GB total. Files stay mergeable: merge_datasets() excuses codec differences.
+#   VCODEC=auto bash ~/tactilevla-record.sh ...   <- test this in the shakedown
+VCODEC_ARG=""
+[ -n "${VCODEC:-}" ] && VCODEC_ARG="--dataset.camera_encoder.vcodec=$VCODEC"
+[ -n "${VCODEC:-}" ] && echo "codec   : $VCODEC (overriding the libsvtav1 default)"
+
+# PYTHONUNBUFFERED is load-bearing, not cosmetic. Every phase banner and every
+# arrow-key confirmation in the patched lerobot_record.py is a bare print() to
+# stdout, and `| tee` below makes stdout block-buffered - so without this the
+# operator sees NOTHING for the whole session and the output all arrives at
+# once when the process exits. That includes the confirmation for the key that
+# discards a take. logging (stderr) is unaffected either way.
+# shellcheck disable=SC2086  # CAFFEINATE, RESUME_ARG and VCODEC_ARG are intentionally unquoted
+PYTHONUNBUFFERED=1 $CAFFEINATE lerobot-record \
   $RESUME_ARG \
+  $VCODEC_ARG \
   --robot.type=so101_follower \
   --robot.port="$FOLLOWER_PORT" \
   --robot.id=follower_01 \
@@ -265,8 +386,8 @@ $CAFFEINATE lerobot-record \
   --dataset.root="$DATASET_ROOT" \
   --dataset.num_episodes="$NUM_EPISODES" \
   --dataset.single_task="$TASK_DESC" \
-  --dataset.episode_time_s=30 \
-  --dataset.reset_time_s=12 \
+  --dataset.episode_time_s="$EPISODE_TIME" \
+  --dataset.reset_time_s="$RESET_TIME" \
   --dataset.push_to_hub=false \
   --dataset.streaming_encoding=true \
   --dataset.encoder_threads=2 2>&1 | tee -a "$LOG"
