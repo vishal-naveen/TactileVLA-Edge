@@ -398,6 +398,11 @@ command -v caffeinate >/dev/null 2>&1 && CAFFEINATE="caffeinate -is"
 # encoder queue fills LeRobot DROPS the frame instead of blocking - no exception,
 # but the parquet row is still written, so video and actions desync for the rest
 # of that episode and it only surfaces as a decode error hours into training.
+# VCODEC now DEFAULTS to auto. It used to be opt-in, and forgetting it on a resume
+# mixed software-AV1 episodes into a hardware-H.264 dataset and brought back the
+# mid-episode stalls the hardware encoder exists to prevent (8 slow steps in one
+# episode, down to 1.7 Hz). VCODEC=libsvtav1 reverts to the software encoder.
+VCODEC="${VCODEC:-auto}"
 # VCODEC=auto picks h264_videotoolbox (Apple Silicon hardware encoder), which
 # removes that whole failure mode at the cost of larger files - irrelevant at
 # ~1 GB total. Files stay mergeable: merge_datasets() excuses codec differences.
