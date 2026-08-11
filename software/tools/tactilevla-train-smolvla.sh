@@ -140,7 +140,26 @@ if [ "${YES:-}" != "1" ]; then
   echo
 fi
 
-mkdir -p "$OUT"
+# DO NOT create $OUT - lerobot-train raises FileExistsError on an existing output_dir
+# when resume is false (configs/train.py:192). See train-act.sh for the full story.
+LOG_DIR="$HOME/tactilevla-logs"
+mkdir -p "$LOG_DIR"
+STAGING_LOG="$LOG_DIR/${JOB}-train.log"
+
+if [ "${RESUME:-}" = "1" ]; then
+  ln -sf "$STAGING_LOG" "$OUT/train.log" 2>/dev/null || true
+else
+  (
+    for _ in $(seq 1 120); do
+      [ -d "$OUT" ] && { ln -sf "$STAGING_LOG" "$OUT/train.log" 2>/dev/null; exit 0; }
+      sleep 1
+    done
+  ) &
+  LINK_WATCHER=$!
+  # shellcheck disable=SC2064  # expand LINK_WATCHER now, not at trap time
+  trap "kill $LINK_WATCHER 2>/dev/null || true" EXIT
+fi
+
 CAFFEINATE=""
 command -v caffeinate >/dev/null 2>&1 && CAFFEINATE="caffeinate -is"
 
@@ -162,7 +181,7 @@ PYTHONUNBUFFERED=1 $CAFFEINATE lerobot-train \
   --save_freq="$SAVE_FREQ" \
   --log_freq=100 \
   --wandb.enable=false \
-  --policy.push_to_hub=false 2>&1 | tee -a "$OUT/train.log"
+  --policy.push_to_hub=false 2>&1 | tee -a "$STAGING_LOG"
 
 echo
 rule

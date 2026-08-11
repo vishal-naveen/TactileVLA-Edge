@@ -209,7 +209,35 @@ if [ "${YES:-}" != "1" ]; then
   echo
 fi
 
-mkdir -p "$OUT"
+# DO NOT create $OUT here. lerobot-train raises FileExistsError when output_dir
+# already exists and resume is false (configs/train.py:192), so creating it just so
+# tee has somewhere to write made every fresh run impossible - and chained as
+# `act && smolvla` that failure silently cancelled the SmolVLA run too. Found only by
+# actually launching training; an earlier test died at the confirmation prompt above
+# and never reached this line.
+#
+# Instead tee to a staging log outside $OUT, then link it in once lerobot-train has
+# created the directory, so trainwatch.sh can still follow $OUT/train.log live.
+LOG_DIR="$HOME/tactilevla-logs"
+mkdir -p "$LOG_DIR"
+STAGING_LOG="$LOG_DIR/${JOB}-train.log"
+
+if [ "$RESUME" = "1" ]; then
+  # Resuming: $OUT already exists, so link immediately.
+  ln -sf "$STAGING_LOG" "$OUT/train.log" 2>/dev/null || true
+else
+  # Bounded wait - if lerobot-train dies before creating $OUT, this must not spin
+  # forever holding the script open.
+  (
+    for _ in $(seq 1 120); do
+      [ -d "$OUT" ] && { ln -sf "$STAGING_LOG" "$OUT/train.log" 2>/dev/null; exit 0; }
+      sleep 1
+    done
+  ) &
+  LINK_WATCHER=$!
+  # shellcheck disable=SC2064  # expand LINK_WATCHER now, not at trap time
+  trap "kill $LINK_WATCHER 2>/dev/null || true" EXIT
+fi
 
 # caffeinate keeps the Mac awake for the whole run. A display sleep is harmless,
 # but a system sleep suspends training and a multi-hour unattended run will hit
@@ -238,7 +266,7 @@ PYTHONUNBUFFERED=1 $CAFFEINATE lerobot-train \
   --save_freq="$SAVE_FREQ" \
   --log_freq=100 \
   --wandb.enable=false \
-  --policy.push_to_hub=false 2>&1 | tee -a "$OUT/train.log"
+  --policy.push_to_hub=false 2>&1 | tee -a "$STAGING_LOG"
 
 echo
 rule
