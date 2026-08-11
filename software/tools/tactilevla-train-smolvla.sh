@@ -30,7 +30,9 @@ REPO="${1:-}"
        local copy  :  bash ~/tactilevla-train-smolvla.sh --local <dataset>"
 
 NAME="${REPO##*/}"
-JOB="smolvla_${NAME}"
+# Overridable so a smoke/timing run can use a throwaway output dir - lerobot-train
+# refuses to start when output_dir already exists and resume is false. See train-act.sh.
+JOB="${JOB:-smolvla_${NAME}}"
 OUT="$HOME/lerobot-outputs/train/$JOB"
 
 DATASET_ARGS=(--dataset.repo_id="$REPO")

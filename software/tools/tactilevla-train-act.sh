@@ -98,7 +98,12 @@ if [ -z "$STEPS" ]; then
   fi
 fi
 
-JOB="act_${DATASET_NAME}"
+# JOB is overridable so a short timing/smoke run can use a throwaway output dir.
+# lerobot-train REFUSES to start when output_dir already exists and resume is false
+# (configs/train.py:192), so a 50-step probe into the default location would make the
+# real run die instantly - and inside an `A && B` chain that silently cancels B too.
+#   JOB=act_probe STEPS=50 ...   then delete ~/lerobot-outputs/train/act_probe
+JOB="${JOB:-act_${DATASET_NAME}}"
 OUT="$HOME/lerobot-outputs/train/$JOB"
 
 # save_freq must SCALE with the run: LeRobot never prunes checkpoints (there is
