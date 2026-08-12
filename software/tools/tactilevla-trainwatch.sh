@@ -77,25 +77,42 @@ if not log.exists():
     print(rule)
     raise SystemExit(0)
 
-text = log.read_text(errors="replace")
+# tqdm draws its progress bar with carriage returns, so translate them to newlines or
+# every bar update collapses into one unsplittable line.
+text = log.read_text(errors="replace").replace("\r", "\n")
 
-# lerobot-train logs one metric line every log_freq steps:
-#   INFO <ts> ot_train.py:548 step:1200 smpl:9600 ep:2 epch:0.15 loss:0.412 ...
-rows = re.findall(r"step:(\d+)\s+smpl:(\d+).*?epch:([\d.]+)\s+loss:([\d.]+)", text)
-total = None
+# STEP COUNT comes from tqdm, which is EXACT.
+#   Training:  25%|██▌       | 10788/42308 [1:08:35<3:20:12,  2.62step/s]
+# The metric line's step: is NOT usable for this: lerobot formats it through
+# format_big_number at precision 0, so 10,576 and 11,499 both render as "11K" and
+# consecutive lines repeat the same value. An earlier regex here matched only plain
+# digits, so past step 999 it stopped matching entirely and froze the display at 900
+# while reporting a nonsense multi-day ETA.
+prog = re.findall(r"\|\s*(\d+)/(\d+)\s*\[", text)
+
+# LOSS and EPOCH come from the metric line, which lerobot logs every log_freq steps:
+#   INFO <ts> ot_train.py:548 step:11K smpl:86K ep:2 epch:1.28 loss:0.251 ...
+# \S+ for the abbreviated fields since they may carry a K/M/B suffix.
+rows = re.findall(r"step:\S+\s+smpl:\S+.*?epch:([\d.]+)\s+loss:([\d.]+)", text)
+
+if not prog:
+    print("  waiting for the first progress line (startup takes ~30s)")
+    print(rule)
+    raise SystemExit(0)
+
+step, total = int(prog[-1][0]), int(prog[-1][1])
+
+# cfg.steps is the configured total and is authoritative if present; tqdm's total
+# should agree, but prefer the config.
 m = re.search(r"cfg\.steps=(\d+)", text)
 if m:
     total = int(m.group(1))
 
-if not rows:
-    print("  waiting for the first metric line (startup takes ~30s)")
-    print(rule)
-    raise SystemExit(0)
-
-step = int(rows[-1][0])
-epoch = float(rows[-1][2])
-loss = float(rows[-1][3])
-first_loss = float(rows[0][3])
+# Loss and epoch lag the step count: lerobot logs them every log_freq steps, so for
+# the first ~100 steps there is a progress bar but no metrics yet.
+epoch = float(rows[-1][0]) if rows else None
+loss = float(rows[-1][1]) if rows else None
+first_loss = float(rows[0][1]) if rows else None
 
 # Wall-clock progress from the log's own timestamps.
 stamps = re.findall(r"\b(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\b", text)
@@ -126,9 +143,13 @@ if total:
 else:
     line("progress", f"step {step:,}")
 
-line("epoch", f"{epoch:.2f}")
-trend = "down ✓" if loss < first_loss else "NOT falling - check this"
-line("loss", f"{loss:.4f}   (started {first_loss:.3f}, {trend})")
+if epoch is not None:
+    line("epoch", f"{epoch:.2f}")
+if loss is not None:
+    trend = "down ✓" if loss < first_loss else "NOT falling - check this"
+    line("loss", f"{loss:.4f}   (started {first_loss:.3f}, {trend})")
+else:
+    line("loss", "not logged yet (lerobot logs metrics every log_freq steps)")
 if elapsed:
     line("elapsed", str(elapsed).split(".")[0])
 if eta:

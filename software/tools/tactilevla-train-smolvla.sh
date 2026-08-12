@@ -106,7 +106,10 @@ SAVE_FREQ=$(( STEPS / TARGET_CHECKPOINTS ))
 NUM_CKPT=$(( STEPS / SAVE_FREQ + 1 ))
 PER_CKPT_GB=$([ "${UNFREEZE:-}" = "1" ] && echo 5 || echo 3)   # rounded UP
 CKPT_GB=$(( NUM_CKPT * PER_CKPT_GB ))
-FREE_GB="$(df -g "$HOME" 2>/dev/null | awk 'NR==2 {print $4}')"
+# df -k, not df -g: -g is BSD/macOS-only and GNU df rejects it. Here the 2>/dev/null
+# made that failure SILENT - FREE_GB came back empty, so the disk guard below was
+# skipped entirely rather than warning. See train-act.sh for the WSL caveat.
+FREE_GB="$(df -k "$HOME" 2>/dev/null | awk 'NR==2 {printf "%d", $4/1048576}')"
 
 echo
 rule

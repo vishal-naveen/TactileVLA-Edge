@@ -120,7 +120,12 @@ SAVE_FREQ=$(( STEPS / TARGET_CHECKPOINTS ))
 [ "$SAVE_FREQ" -lt 1000 ] && SAVE_FREQ=1000
 NUM_CKPT=$(( STEPS / SAVE_FREQ + 1 ))
 CKPT_GB=$(( (NUM_CKPT * 591 + 1023) / 1024 ))   # round UP
-FREE_GB="$(df -g "$HOME" | awk 'NR==2 {print $4}')"
+# df -k, not df -g: -g is a BSD/macOS flag and GNU df (Linux, WSL) rejects it, which
+# under `set -e` aborted this script outright on the PC. -k is POSIX everywhere.
+# NOTE on WSL: $HOME is on the ext4 virtual disk, which is sparse and grows on the
+# Windows drive - so this reports the vdisk's nominal size (often ~900 GB) and the
+# check below cannot see the real free space on C:. Watch C: yourself there.
+FREE_GB="$(df -k "$HOME" | awk 'NR==2 {printf "%d", $4/1048576}')"
 
 case "$DEVICE" in
   mps)  SEC_PER_STEP=$MPS_SEC_PER_STEP ;;
