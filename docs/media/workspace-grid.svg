@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="162.0 93.0 593.0 376.0" width="593" height="376" font-family="-apple-system,Segoe UI,sans-serif">
+<rect x="162.0" y="93.0" width="593.0" height="376.0" fill="#f6f7f8"/>
+<polygon points="287.0,121.0 257.7,162.1 386.5,188.8 411.8,143.4" fill="#3ba88f" fill-opacity="0.28" stroke="#1d2b32" stroke-width="1.5"/>
+<text x="335.8" y="149.8" text-anchor="middle" font-size="21" font-weight="700" fill="#1d2b32">A1</text>
+<text x="335.8" y="168.8" text-anchor="middle" font-size="14" fill="#1d2b32" opacity="0.85">20 eps</text>
+<polygon points="257.7,162.1 225.5,207.2 358.6,239.1 386.5,188.8" fill="#3ba88f" fill-opacity="0.28" stroke="#1d2b32" stroke-width="1.5"/>
+<text x="307.1" y="195.3" text-anchor="middle" font-size="21" font-weight="700" fill="#1d2b32">A2</text>
+<text x="307.1" y="214.3" text-anchor="middle" font-size="14" fill="#1d2b32" opacity="0.85">20 eps</text>
+<polygon points="225.5,207.2 190.0,257.0 327.4,295.0 358.6,239.1" fill="#3ba88f" fill-opacity="0.28" stroke="#1d2b32" stroke-width="1.5"/>
+<text x="275.4" y="245.6" text-anchor="middle" font-size="21" font-weight="700" fill="#1d2b32">A3</text>
+<text x="275.4" y="264.6" text-anchor="middle" font-size="14" fill="#1d2b32" opacity="0.85">20 eps</text>
+<polygon points="411.8,143.4 386.5,188.8 537.2,220.1 556.8,169.4" fill="#3ba88f" fill-opacity="0.28" stroke="#1d2b32" stroke-width="1.5"/>
+<text x="473.1" y="176.5" text-anchor="middle" font-size="21" font-weight="700" fill="#1d2b32">B1</text>
+<text x="473.1" y="195.5" text-anchor="middle" font-size="14" fill="#1d2b32" opacity="0.85">20 eps</text>
+<polygon points="386.5,188.8 358.6,239.1 515.5,276.7 537.2,220.1" fill="#e0a33c" fill-opacity="0.55" stroke="#1d2b32" stroke-width="1.5"/>
+<text x="449.5" y="227.2" text-anchor="middle" font-size="21" font-weight="700" fill="#1d2b32">B2</text>
+<text x="449.5" y="246.2" text-anchor="middle" font-size="14" fill="#1d2b32" opacity="0.85">held out</text>
+<polygon points="358.6,239.1 327.4,295.0 491.0,340.2 515.5,276.7" fill="#3ba88f" fill-opacity="0.28" stroke="#1d2b32" stroke-width="1.5"/>
+<text x="423.1" y="283.8" text-anchor="middle" font-size="21" font-weight="700" fill="#1d2b32">B3</text>
+<text x="423.1" y="302.8" text-anchor="middle" font-size="14" fill="#1d2b32" opacity="0.85">20 eps</text>
+<polygon points="556.8,169.4 537.2,220.1 715.8,257.2 727.0,200.0" fill="#3ba88f" fill-opacity="0.28" stroke="#1d2b32" stroke-width="1.5"/>
+<text x="634.2" y="207.7" text-anchor="middle" font-size="21" font-weight="700" fill="#1d2b32">C1</text>
+<text x="634.2" y="226.7" text-anchor="middle" font-size="14" fill="#1d2b32" opacity="0.85">20 eps</text>
+<polygon points="537.2,220.1 515.5,276.7 703.3,321.7 715.8,257.2" fill="#3ba88f" fill-opacity="0.28" stroke="#1d2b32" stroke-width="1.5"/>
+<text x="618.0" y="265.0" text-anchor="middle" font-size="21" font-weight="700" fill="#1d2b32">C2</text>
+<text x="618.0" y="284.0" text-anchor="middle" font-size="14" fill="#1d2b32" opacity="0.85">20 eps</text>
+<polygon points="515.5,276.7 491.0,340.2 689.0,395.0 703.3,321.7" fill="#3ba88f" fill-opacity="0.28" stroke="#1d2b32" stroke-width="1.5"/>
+<text x="599.7" y="329.4" text-anchor="middle" font-size="21" font-weight="700" fill="#1d2b32">C3</text>
+<text x="599.7" y="348.4" text-anchor="middle" font-size="14" fill="#1d2b32" opacity="0.85">20 eps</text>
+<text x="168.0" y="455.0" font-size="15" fill="#1d2b32" opacity="0.75">160 episodes over 8 cells &#183; B2 held out &#183; overhead camera, 800&#215;600</text>
+</svg>

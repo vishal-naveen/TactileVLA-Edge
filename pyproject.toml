@@ -1,7 +1,7 @@
 [project]
 name = "tactilevla-edge"
 version = "0.0.0"
-description = "Open-source tactile vision-language-action stack for sub-$1k robot hardware"
+description = "Open-source tactile vision-language-action stack for sub-$300 robot hardware"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }

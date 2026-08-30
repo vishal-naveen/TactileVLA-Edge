@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TactileVLA-Edge — vision-language-action on sub-$300 robot hardware</title>
+<meta name="description" content="An open-source tactile VLA stack on SO-101 arms. 160 teleoperated demonstrations, ACT 18/20 and SmolVLA 16/20, both generalizing to a held-out workspace cell.">
+<style>
+  :root {
+    --paper:#f4f6f5; --card:#ffffff; --ink:#14201f; --slate:#5c6a68;
+    --rule:#d3dad8; --teal:#2f8f79; --amber:#c07f1d; --amber-fill:#f0e2c6;
+    --teal-fill:#dfeeea; --shadow:0 1px 2px rgba(20,32,31,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper:#0e1614; --card:#151f1d; --ink:#e6ebe9; --slate:#93a19e;
+      --rule:#26332f; --teal:#4fbca2; --amber:#e8ab4d; --amber-fill:#3a2f18;
+      --teal-fill:#16302a; --shadow:none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#0e1614; --card:#151f1d; --ink:#e6ebe9; --slate:#93a19e;
+    --rule:#26332f; --teal:#4fbca2; --amber:#e8ab4d; --amber-fill:#3a2f18;
+    --teal-fill:#16302a; --shadow:none;
+  }
+  :root[data-theme="light"] {
+    --paper:#f4f6f5; --card:#ffffff; --ink:#14201f; --slate:#5c6a68;
+    --rule:#d3dad8; --teal:#2f8f79; --amber:#c07f1d; --amber-fill:#f0e2c6;
+    --teal-fill:#dfeeea; --shadow:0 1px 2px rgba(20,32,31,.06);
+  }
+
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px; line-height:1.62; -webkit-font-smoothing:antialiased;
+  }
+  .mono { font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace; }
+  .wrap { max-width:1080px; margin:0 auto; padding:0 28px 96px; }
+
+  .mast { border-bottom:2px solid var(--ink); padding:40px 0 18px; margin-bottom:34px; }
+  .eyebrow {
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11.5px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--slate); margin:0 0 12px;
+  }
+  h1 {
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:clamp(30px,5.2vw,50px); font-weight:600; letter-spacing:-.025em;
+    margin:0 0 10px; text-wrap:balance;
+  }
+  .lede { font-size:18px; color:var(--slate); max-width:62ch; margin:0; }
+
+  .hero { display:grid; grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); gap:30px; align-items:start; }
+  @media (max-width:820px) { .hero { grid-template-columns:1fr; } }
+  figure { margin:0; }
+  figure img { display:block; width:100%; height:auto; border:1px solid var(--rule); border-radius:3px; }
+  figcaption { font-size:13.5px; color:var(--slate); margin-top:9px; line-height:1.5; }
+
+  .scorecard { border:1px solid var(--rule); background:var(--card); border-radius:3px; box-shadow:var(--shadow); }
+  .scorecard h2 {
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--slate);
+    margin:0; padding:14px 18px; border-bottom:1px solid var(--rule); font-weight:600;
+  }
+  .score { display:flex; align-items:baseline; justify-content:space-between; gap:14px;
+           padding:15px 18px; border-bottom:1px solid var(--rule); }
+  .score:last-of-type { border-bottom:0; }
+  .score .who { font-size:15px; }
+  .score .who small { display:block; color:var(--slate); font-size:12.5px; }
+  .score .num {
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    font-variant-numeric:tabular-nums; font-size:25px; font-weight:600; white-space:nowrap;
+  }
+  .caveat { padding:13px 18px; font-size:13.5px; color:var(--slate); background:var(--teal-fill);
+            border-top:1px solid var(--rule); line-height:1.5; margin:0; }
+
+  .status { display:flex; flex-wrap:wrap; gap:10px; margin:26px 0 0; }
+  .chip {
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:12px; letter-spacing:.03em; padding:5px 11px; border-radius:2px;
+    border:1px solid var(--rule); color:var(--slate); background:var(--card);
+  }
+  .chip.on { color:var(--teal); border-color:var(--teal); }
+  a.chip { text-decoration:none; }
+  a.chip:hover { border-color:var(--ink); color:var(--ink); }
+
+  section { margin-top:56px; }
+  h2.sec {
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:12px; letter-spacing:.15em; text-transform:uppercase; color:var(--slate);
+    margin:0 0 16px; padding-bottom:9px; border-bottom:1px solid var(--rule); font-weight:600;
+  }
+  h3 { font-size:21px; margin:0 0 10px; letter-spacing:-.012em; text-wrap:balance; }
+  p { margin:0 0 15px; max-width:68ch; }
+  .lead-p { font-size:17.5px; }
+  strong { font-weight:650; }
+  a { color:var(--teal); text-decoration:none; border-bottom:1px solid currentColor; }
+  a:focus-visible { outline:2px solid var(--amber); outline-offset:3px; }
+
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:30px; }
+  @media (max-width:760px) { .cols { grid-template-columns:1fr; } }
+
+  .tablewrap { overflow-x:auto; border:1px solid var(--rule); border-radius:3px; background:var(--card); }
+  table { border-collapse:collapse; width:100%; font-size:14.5px; }
+  th, td { text-align:left; padding:10px 15px; border-bottom:1px solid var(--rule); }
+  tr:last-child td { border-bottom:0; }
+  th {
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11px; letter-spacing:.11em; text-transform:uppercase; color:var(--slate); font-weight:600;
+  }
+  td.n { font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+         font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .tag { font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+         font-size:11.5px; padding:2px 8px; border-radius:2px; white-space:nowrap; }
+  .tag.ok { color:var(--teal); background:var(--teal-fill); }
+  .tag.no { color:var(--amber); background:var(--amber-fill); }
+
+  .heldout { border:1px solid var(--amber); border-radius:3px; overflow:hidden; background:var(--card); }
+  .heldout .bar {
+    background:var(--amber-fill); padding:13px 18px; border-bottom:1px solid var(--amber);
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:12px; letter-spacing:.13em; text-transform:uppercase; color:var(--amber);
+    font-weight:600; margin:0;
+  }
+  .heldout .body { padding:20px 18px; }
+
+  .vids { display:grid; grid-template-columns:1fr 1fr; gap:22px; }
+  @media (max-width:760px) { .vids { grid-template-columns:1fr; } }
+  .vid { border:1px solid var(--rule); border-radius:3px; overflow:hidden; background:var(--card); }
+  .vid.held { border-color:var(--amber); }
+  .vid video { display:block; width:100%; height:auto; background:#000; }
+  .vid .meta { padding:11px 15px; display:flex; justify-content:space-between;
+               align-items:baseline; gap:12px; }
+  .vid .meta .name {
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:13.5px; font-weight:600;
+  }
+  .vid .meta .cell { font-size:12px; color:var(--slate); }
+
+  .gridfig { background:#f6f7f8; border:1px solid var(--rule); border-radius:3px; padding:6px; }
+  .gridfig img { border:0; }
+
+  ul.scope { list-style:none; padding:0; margin:0; display:grid; gap:11px; max-width:72ch; }
+  ul.scope li { padding-left:22px; position:relative; font-size:15px; }
+  ul.scope li::before {
+    content:"—"; position:absolute; left:0; color:var(--amber);
+    font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  }
+
+  footer { margin-top:64px; padding-top:22px; border-top:1px solid var(--rule);
+           font-size:13.5px; color:var(--slate); display:flex; flex-wrap:wrap; gap:8px 26px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">Open hardware &middot; Apache-2.0</p>
+    <h1>TactileVLA-Edge</h1>
+    <p class="lede">A vision-language-action stack for contact-rich robot manipulation on
+    sub-$300 hardware, working toward on-device tactile inference.</p>
+    <div class="status">
+      <span class="chip on">Phase 2 complete &mdash; vision-only baseline</span>
+      <span class="chip">Phase 3 tactile &mdash; not built</span>
+      <a class="chip" href="https://github.com/vishal-naveen/TactileVLA-Edge">Source on GitHub</a>
+    </div>
+  </header>
+
+  <div class="hero">
+    <figure>
+      <img src="media/act-b2-heldout.gif" alt="The SO-101 arm grasping a foam pool noodle and dropping it into a cup">
+      <figcaption><strong>ACT in cell B2</strong> &mdash; approach, grasp, transport, release.
+      No training episode ever placed the object here.</figcaption>
+    </figure>
+
+    <div class="scorecard">
+      <h2>Autonomous trials</h2>
+      <div class="score">
+        <span class="who">ACT<small>52M params &middot; 42,308 steps</small></span>
+        <span class="num">18 / 20</span>
+      </div>
+      <div class="score">
+        <span class="who">SmolVLA-450M<small>frozen vision encoder &middot; 20,000 steps</small></span>
+        <span class="num">16 / 20</span>
+      </div>
+      <p class="caveat">20 trials cannot separate these two &mdash; the confidence intervals
+      overlap heavily. What they establish is that both work.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2 class="sec">The claim</h2>
+    <p class="lead-p">Tactile VLA models exist, but the published work runs on <strong>~$30k research
+    arms</strong>. This project aims to be a complete, reproducible, open-source tactile-VLA
+    reference stack that runs on hardware costing <strong>under $300</strong> &mdash; the arm, the
+    touch sensing, the dataset format, the fusion method, and the measured results, in one place.</p>
+    <p>That is roughly a <strong>100&times; reduction</strong> in hardware cost. Reading touch off the
+    servos the arm already has is a large part of why: it keeps the touch channel at zero marginal
+    cost.</p>
+    <p>To be precise about the claim: this is <em>not</em> the first tactile-VLA. Tactile-VLA, TacVLA,
+    and TacFiLM came first. The intended contribution is the integration at the low-cost end &mdash;
+    and it does not exist yet. What exists today is the baseline it has to beat.</p>
+  </section>
+
+  <section>
+    <h2 class="sec">Watch the runs</h2>
+    <p>Four trials filmed end to end, each narrated with the workspace cell called out before the
+    run. All four succeeded. <strong>B2 is the held-out cell</strong> &mdash; it appears in none of
+    the 160 training episodes.</p>
+    <div class="vids">
+      <div class="vid held">
+        <video controls preload="none" poster="media/poster-act-b2.jpg"
+               src="media/act-b2.mp4"></video>
+        <div class="meta"><span class="name">ACT</span><span class="cell">B2 &middot; held out</span></div>
+      </div>
+      <div class="vid held">
+        <video controls preload="none" poster="media/poster-smolvla-b2.jpg"
+               src="media/smolvla-b2.mp4"></video>
+        <div class="meta"><span class="name">SmolVLA-450M</span><span class="cell">B2 &middot; held out</span></div>
+      </div>
+      <div class="vid">
+        <video controls preload="none" poster="media/poster-act-a2.jpg"
+               src="media/act-a2.mp4"></video>
+        <div class="meta"><span class="name">ACT</span><span class="cell">A2 &middot; trained</span></div>
+      </div>
+      <div class="vid">
+        <video controls preload="none" poster="media/poster-smolvla-c3.jpg"
+               src="media/smolvla-c3.mp4"></video>
+        <div class="meta"><span class="name">SmolVLA-450M</span><span class="cell">C3 &middot; trained</span></div>
+      </div>
+    </div>
+    <p style="margin-top:16px">These are demonstrations, not the scored trials &mdash; the 20-trial
+    runs were tallied by hand without video.</p>
+  </section>
+
+  <section>
+    <h2 class="sec">Dataset &amp; protocol</h2>
+    <div class="cols">
+      <div>
+        <h3>160 demonstrations, stratified by design</h3>
+        <p>Teleoperated episodes spread over a 3&times;3 grid projected onto the table by homography
+        from four clicked corners. Eight cells were recorded at <strong>exactly 20 episodes
+        each</strong>. Within every cell the object's yaw sweeps the full &plusmn;90&deg; range in
+        10&deg; steps, so no cell is a single memorised pose.</p>
+        <p>The centre cell, <strong>B2, was never recorded</strong> &mdash; it exists only to be
+        tested against.</p>
+        <div class="tablewrap">
+          <table>
+            <tr><th>Episodes</th><td class="n">160</td></tr>
+            <tr><th>Frames</th><td class="n">67,693</td></tr>
+            <tr><th>Rate</th><td class="n">30 fps</td></tr>
+            <tr><th>Cameras</th><td class="n">800&times;600 overhead, 640&times;480 wrist</td></tr>
+            <tr><th>Format</th><td class="n">LeRobot v3.0</td></tr>
+          </table>
+        </div>
+      </div>
+      <figure>
+        <div class="gridfig"><img src="media/workspace-grid.svg" alt="Workspace grid showing eight cells at 20 episodes each and cell B2 held out"></div>
+        <figcaption>Rendered from the recording session's own saved geometry, so the figure cannot
+        drift from what was recorded. The grid is a perspective quad, not a square &mdash; outer
+        cells cover more table than inner ones.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">Generalization</h2>
+    <div class="heldout">
+      <p class="bar">Held-out cell &middot; zero training episodes</p>
+      <div class="body">
+        <h3>Both architectures succeeded in a cell they were never shown</h3>
+        <p>This is the result worth reporting, more than either success rate. Rather than matching
+        the nearest trained trajectory, both policies interpolated into an unseen region of the
+        workspace &mdash; on a 160-episode dataset.</p>
+        <figure>
+          <img src="media/grid-session-b2.jpg" alt="The grid overlay on screen during the recording session, with B2 marked hold">
+          <figcaption>The live overlay mid-session, B2 marked <span class="mono">(hold)</span>,
+          with the finished dataset's 160 episodes / 67,693 frames visible in the terminal
+          behind it.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">What the policy sees</h2>
+    <div class="cols">
+      <figure>
+        <img src="media/observation-streams.gif" alt="Side-by-side overhead and wrist camera streams from a training episode">
+        <figcaption>Overhead (left) and wrist (right), from episode 0 of the training set &mdash;
+        the actual observation space, not a staged shot.</figcaption>
+      </figure>
+      <div>
+        <h3>Why two cameras</h3>
+        <p>The overhead camera loses the object behind the gripper at exactly the moment contact
+        matters. The wrist camera is what keeps the grasp legible.</p>
+        <p>That occlusion is also the argument for touch: a channel that still reports when vision
+        is blocked. Which is Phase 3, and is not built.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="sec">Hardware</h2>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Layer</th><th>Component</th><th>State</th></tr></thead>
+        <tbody>
+          <tr><td>Arm</td><td>SO-101 leader + follower, Feetech STS3215</td><td><span class="tag ok">working</span></td></tr>
+          <tr><td>Vision</td><td>Overhead 800&times;600 + wrist 640&times;480, 30 fps</td><td><span class="tag ok">working</span></td></tr>
+          <tr><td>Policy</td><td>ACT and SmolVLA-450M via LeRobot</td><td><span class="tag ok">working</span></td></tr>
+          <tr><td>Compute</td><td>RTX 3060 training; Apple Silicon / MPS inference</td><td><span class="tag ok">working</span></td></tr>
+          <tr><td>Touch</td><td>Servo load (<span class="mono">Present_Load</span>, STS3215 reg. 60)</td><td><span class="tag no">not integrated</span></td></tr>
+          <tr><td>Fusion</td><td>FiLM conditioning, token-concat first</td><td><span class="tag no">not built</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:14px">Touch reads load off servos the arm already has, so it needs no
+    additional hardware. This replaced an earlier plan to build an AnySkin magnetic sensor; that
+    sensor was never built.</p>
+  </section>
+
+  <section>
+    <h2 class="sec">What this does not establish</h2>
+    <ul class="scope">
+      <li><strong>Nothing about touch.</strong> Both policies are vision-only. No tactile channel was
+      recorded, trained on, or evaluated.</li>
+      <li><strong>Not a comparison between ACT and SmolVLA.</strong> 20 trials cannot separate 90%
+      from 80%.</li>
+      <li><strong>One task, one object, one lighting setup.</strong> Nothing here speaks to a second
+      task.</li>
+      <li><strong>The scored trials have no per-trial record.</strong> Counts were tallied by hand at
+      the time; future runs should write a per-trial log.</li>
+    </ul>
+    <p style="margin-top:18px">Full protocol, training configuration, and limits:
+    <a href="https://github.com/vishal-naveen/TactileVLA-Edge/blob/main/docs/results.md">docs/results.md</a>.</p>
+  </section>
+
+  <footer>
+    <span>Vishal Naveen</span>
+    <span>Code Apache-2.0 &middot; hardware CERN-OHL-P v2</span>
+    <span class="mono"><a href="https://github.com/vishal-naveen/TactileVLA-Edge">github.com/vishal-naveen/TactileVLA-Edge</a></span>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -25,6 +25,11 @@ wandb/
 data/
 datasets/
 
+# Narrow exception: web-compressed demonstration footage for the project page.
+# Dataset video stays excluded by the rule above -- this is only the handful of
+# 540p clips under docs/media/, kept to a few MB each.
+!docs/media/*.mp4
+
 # --- Calibration (machine-specific, lives in ~/.cache) ---
 calibration/
 *.calib.json

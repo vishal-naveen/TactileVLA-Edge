@@ -4,6 +4,7 @@ Organized along [Diataxis](https://diataxis.fr) lines:
 
 | Path | Kind | Contents |
 |---|---|---|
+| `results.md` | Reference | Measured results, protocol, and what they do not establish |
 | `bringup.md` | Tutorial | First-time SO-101 bring-up, start to teleoperation |
 | `recording-protocol.md` | How-to | Collecting a dataset that generalizes across object positions |
 | `training-setup.md` | How-to | Training machine setup (Windows + WSL2, RTX 3060) |
