@@ -204,6 +204,28 @@
   </section>
 
   <section>
+    <h2 class="sec">Collecting the data</h2>
+    <div class="cols">
+      <div class="vid">
+        <video controls preload="none" poster="media/poster-timelapse.jpg"
+               src="media/recording-timelapse.mp4"></video>
+        <div class="meta"><span class="name">Recording session</span><span class="cell">time-lapse</span></div>
+      </div>
+      <div>
+        <h3>160 episodes, teleoperated one at a time</h3>
+        <p>Every episode is a human driving the follower arm through the task on the leader arm,
+        then resetting the scene by hand: reposition the noodle into the next cell, rotate it to
+        the next yaw in the sweep, start the next take.</p>
+        <p>Four rounds walking the perimeter <span class="mono">A1&rarr;B1&rarr;C1&rarr;C2&rarr;C3&rarr;B3&rarr;A3&rarr;A2</span>,
+        five episodes per cell per round. The walk order reverses on rounds 2 and 4 so cell
+        identity does not alias with fatigue and drift within a round.</p>
+        <p>This is the part no architecture choice can substitute for, and it is most of the
+        wall-clock cost of the project.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
     <h2 class="sec">Watch the runs</h2>
     <p>Four trials filmed end to end, each narrated with the workspace cell called out before the
     run. All four succeeded. <strong>B2 is the held-out cell</strong> &mdash; it appears in none of

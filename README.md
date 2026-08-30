@@ -68,6 +68,12 @@ table by homography. Eight cells recorded at **exactly 20 episodes each**; withi
 object's yaw sweeps ±90° in 10° steps. The centre cell **B2 was never recorded** — it exists only
 to be tested against.
 
+Every episode is driven by hand on the leader arm and reset by hand between takes — four rounds
+walking the perimeter `A1→B1→C1→C2→C3→B3→A3→A2`, with the walk order reversed on rounds 2 and 4
+so cell identity doesn't alias with within-round drift.
+[Time-lapse of the recording session](https://vishal-naveen.github.io/TactileVLA-Edge/#collecting-the-data)
+([`recording-timelapse.mp4`](docs/media/recording-timelapse.mp4)).
+
 <div align="center">
 
 ![Workspace grid](docs/media/workspace-grid.svg)
