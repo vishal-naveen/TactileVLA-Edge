@@ -85,13 +85,16 @@ def collect_corners(cap: cv2.VideoCapture, window: str) -> list[list[float]] | N
         for i, (px, py) in enumerate(points):
             cv2.circle(shown, (int(px), int(py)), 6, COLOR_EDGE, -1)
             cv2.putText(
-                shown, str(i + 1), (int(px) + 9, int(py) - 9),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.6, COLOR_EDGE, 2,
+                shown,
+                str(i + 1),
+                (int(px) + 9, int(py) - 9),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                COLOR_EDGE,
+                2,
             )
         if len(points) >= 2:
-            cv2.polylines(
-                shown, [np.array(points, np.int32)], len(points) == 4, COLOR_EDGE, 1
-            )
+            cv2.polylines(shown, [np.array(points, np.int32)], len(points) == 4, COLOR_EDGE, 1)
         if len(points) < 4:
             msg = f"Click corner {len(points) + 1}/4: {CLICK_PROMPTS[len(points)]}"
         else:
@@ -149,12 +152,14 @@ def draw_grid(
                 color = COLOR_TRAINED
             quad = to_image(
                 matrix,
-                np.array([
-                    [col / cols, row / rows],
-                    [(col + 1) / cols, row / rows],
-                    [(col + 1) / cols, (row + 1) / rows],
-                    [col / cols, (row + 1) / rows],
-                ]),
+                np.array(
+                    [
+                        [col / cols, row / rows],
+                        [(col + 1) / cols, row / rows],
+                        [(col + 1) / cols, (row + 1) / rows],
+                        [col / cols, (row + 1) / rows],
+                    ]
+                ),
             )
             cv2.fillPoly(overlay, [quad.astype(np.int32)], color)
     cv2.addWeighted(overlay, 0.20, out, 0.80, 0, out)
@@ -170,9 +175,7 @@ def draw_grid(
     for row in range(rows):
         for col in range(cols):
             name = cell_name(row, col)
-            centre = to_image(
-                matrix, np.array([[(col + 0.5) / cols, (row + 0.5) / rows]])
-            )[0]
+            centre = to_image(matrix, np.array([[(col + 0.5) / cols, (row + 0.5) / rows]]))[0]
             cx, cy = int(centre[0]), int(centre[1])
             if name in skip:
                 # An X, so an unusable cell is unmistakable at a glance.
@@ -184,7 +187,9 @@ def draw_grid(
             suffix = "" if name not in holdout else " (hold)"
             label = f"{name}{suffix}"
             cv2.putText(out, label, (cx - 26, cy - 14), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 3)
-            cv2.putText(out, label, (cx - 26, cy - 14), cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLOR_EDGE, 1)
+            cv2.putText(
+                out, label, (cx - 26, cy - 14), cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLOR_EDGE, 1
+            )
 
     trained = rows * cols - len(skip) - len(holdout)
     legend = [
@@ -220,7 +225,9 @@ def main() -> int:
     # and place the noodle in a cell you had ruled out.
     parser.add_argument("--rows", type=int, default=None)
     parser.add_argument("--cols", type=int, default=None)
-    parser.add_argument("--res", default=DEFAULT_RES, help=f"capture resolution (default {DEFAULT_RES})")
+    parser.add_argument(
+        "--res", default=DEFAULT_RES, help=f"capture resolution (default {DEFAULT_RES})"
+    )
     parser.add_argument("--index", type=int, default=TOP_CAM)
     parser.add_argument("--skip", default=None, help="cells that cannot be used at all, e.g. B2")
     parser.add_argument("--holdout", default=None, help="cells to record nothing in, e.g. A2,C3")
@@ -291,11 +298,15 @@ def main() -> int:
 
     window = f"grid overlay - cam {args.index}"
     cv2.namedWindow(window, cv2.WINDOW_NORMAL)
-    cv2.resizeWindow(window, min(1100, actual[0]), int(min(1100, actual[0]) * actual[1] / actual[0]))
+    cv2.resizeWindow(
+        window, min(1100, actual[0]), int(min(1100, actual[0]) * actual[1] / actual[0])
+    )
 
     corners: list[list[float]] = [] if args.reset else stored.get("corners") or []
     if corners and stored.get("resolution") != list(actual):
-        print(f"NOTE: corners were clicked at {stored.get('resolution')}, now running {list(actual)}.")
+        print(
+            f"NOTE: corners were clicked at {stored.get('resolution')}, now running {list(actual)}."
+        )
         print("      Corners are stored in PIXELS, so they only line up at one")
         print("      resolution - press 'c' to re-click if the grid is off.")
 
@@ -367,7 +378,8 @@ def main() -> int:
         print("this costs the recorder nothing. Re-run --export to refresh it.")
         return 0
     print(f"\n{args.rows}x{args.cols} grid on cam {args.index} at {actual[0]}x{actual[1]}")
-    print(f"  record in : {sorted({cell_name(r, c) for r in range(args.rows) for c in range(args.cols)} - skip - holdout)}")
+    all_cells = {cell_name(r, c) for r in range(args.rows) for c in range(args.cols)}
+    print(f"  record in : {sorted(all_cells - skip - holdout)}")
     print(f"  hold out  : {sorted(holdout) or '(none)'}")
     print(f"  skipped   : {sorted(skip) or '(none)'}")
     if locked:
@@ -400,7 +412,9 @@ def main() -> int:
         if key in (ord("1"), ord("2"), ord("3"), ord("4")):
             selected = key - ord("1")
         if locked and key in (ord("r"), ord("f"), ord("c"), 0, 1, 2, 3, 81, 82, 83, 84):
-            print("grid is LOCKED - edit refused. Unlock with: python3 ~/tactilevla-grid.py --unlock")
+            print(
+                "grid is LOCKED - edit refused. Unlock with: python3 ~/tactilevla-grid.py --unlock"
+            )
             continue
         if key == ord("r"):
             # Rotating the corner list rotates which physical corner is treated as
@@ -415,7 +429,16 @@ def main() -> int:
             save_corners()
             print("mirrored labelling")
         # Arrow keys: macOS OpenCV reports these as 0/1/2/3 with the low byte mask.
-        nudge = {0: (0, -2), 1: (0, 2), 2: (-2, 0), 3: (2, 0), 81: (-2, 0), 82: (0, -2), 83: (2, 0), 84: (0, 2)}
+        nudge = {
+            0: (0, -2),
+            1: (0, 2),
+            2: (-2, 0),
+            3: (2, 0),
+            81: (-2, 0),
+            82: (0, -2),
+            83: (2, 0),
+            84: (0, 2),
+        }
         if key in nudge:
             dx, dy = nudge[key]
             corners[selected][0] += dx

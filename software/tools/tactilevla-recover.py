@@ -119,7 +119,9 @@ def main() -> int:
         eps: set[int] = set()
         for f in files:
             try:
-                eps.update(pd.read_parquet(f, columns=["episode_index"])["episode_index"].unique().tolist())
+                eps.update(
+                    pd.read_parquet(f, columns=["episode_index"])["episode_index"].unique().tolist()
+                )
             except Exception as exc:
                 unreadable.append((Path(f).name, str(exc)[:60]))
         on_disk = len(eps)

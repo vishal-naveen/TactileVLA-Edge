@@ -16,10 +16,11 @@ Ctrl-C to stop (torque is released on exit).
 
 from __future__ import annotations
 
+import contextlib
 import json
 import sys
-from pathlib import Path
 import time
+from pathlib import Path
 
 from lerobot.motors import Motor, MotorNormMode
 from lerobot.motors.feetech import FeetechMotorsBus
@@ -67,14 +68,10 @@ def main() -> int:
         print("\nstopped by user")
     finally:
         print("\nReleasing torque...")
-        try:
+        with contextlib.suppress(Exception):
             bus.disable_torque()
-        except Exception:
-            pass
-        try:
+        with contextlib.suppress(Exception):
             bus.disconnect()
-        except Exception:
-            pass
 
     print("\n" + "=" * 58)
     print("PEAK |load| observed per joint:")

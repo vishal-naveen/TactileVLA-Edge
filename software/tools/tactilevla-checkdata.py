@@ -59,9 +59,7 @@ EPISODE_START_RE = re.compile(
 # does is written. A slow step there costs NOTHING - it happens while you are
 # repositioning the object. Without this marker every stall during setup was
 # attributed to the episode and failed a good dataset.
-RESET_START_RE = re.compile(
-    r"^\w+\s+(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*Reset the environment"
-)
+RESET_START_RE = re.compile(r"^\w+\s+(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*Reset the environment")
 # The streaming AV1 encoder DROPS a frame when its queue is full rather than
 # blocking (datasets/video_utils.py, feed_frame: `except queue.Full`). No
 # exception is raised, but the parquet row for that step is still written - so
@@ -246,7 +244,10 @@ def main() -> int:
                 "in the unlogged episodes would be invisible."
             )
         else:
-            print(f"log       : {n_starts} episode-start lines for {len(lengths)} episodes - log is complete")
+            print(
+                f"log       : {n_starts} episode-start lines for "
+                f"{len(lengths)} episodes - log is complete"
+            )
 
         # Encoder frame drops -> video/parquet desync. The frame-count check
         # below catches the consequence; this catches the cause, by name.

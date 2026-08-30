@@ -27,6 +27,7 @@ initiative, so this one asks.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import glob
 import json
 import sys
@@ -77,15 +78,15 @@ def probe(port: str) -> dict | None:
     except Exception as exc:
         return {"port": port, "error": f"{type(exc).__name__}: {exc}"}
     finally:
-        try:
+        with contextlib.suppress(Exception):
             bus.disconnect()
-        except Exception:
-            pass
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--write", action="store_true", help="save the result to ~/tactilevla-ports.json")
+    ap.add_argument(
+        "--write", action="store_true", help="save the result to ~/tactilevla-ports.json"
+    )
     args = ap.parse_args()
 
     candidates = sorted(set(glob.glob("/dev/tty.usbmodem*")))
@@ -106,7 +107,10 @@ def main() -> int:
             print(f"  {port}\n      not an arm ({r['error'][:60]})")
             continue
         label = r["role"] or "UNKNOWN"
-        print(f"  {port}\n      {r['volts'] / 10:.1f} V, {r['motors']} motors, {r['max_temp']} C  ->  {label}")
+        print(
+            f"  {port}\n      {r['volts'] / 10:.1f} V, {r['motors']} motors, "
+            f"{r['max_temp']} C  ->  {label}"
+        )
         if r["role"]:
             if r["role"] in found:
                 print(f"\nTWO ports both look like the {r['role']}. Cannot choose between them.")

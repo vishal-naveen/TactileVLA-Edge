@@ -195,8 +195,12 @@ def parse_res(text: str, label: str) -> tuple[int, int]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--seconds", type=float, default=20.0, help="duration of the both-cameras phase")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--seconds", type=float, default=20.0, help="duration of the both-cameras phase"
+    )
     parser.add_argument("--top-res", default=DEFAULT_TOP_RES)
     parser.add_argument("--wrist-res", default=DEFAULT_WRIST_RES)
     parser.add_argument("--modes", action="store_true", help="probe supported modes and exit")
@@ -268,11 +272,17 @@ def main() -> int:
 
     print("\n" + "=" * 74)
     problems = []
-    for label, solo_key, both_key in (("top", "top_solo", "top_both"), ("wrist", "wrist_solo", "wrist_both")):
+    for label, solo_key, both_key in (
+        ("top", "top_solo", "top_both"),
+        ("wrist", "wrist_solo", "wrist_both"),
+    ):
         solo_fps = results[solo_key]["fps"]
         both_fps = results[both_key]["fps"]
         cost = solo_fps - both_fps
-        print(f"{label:5s}: {solo_fps:5.1f} fps alone -> {both_fps:5.1f} fps together  (contention cost {cost:+.1f})")
+        print(
+            f"{label:5s}: {solo_fps:5.1f} fps alone -> {both_fps:5.1f} fps together  "
+            f"(contention cost {cost:+.1f})"
+        )
         if both_fps < TARGET_FPS * FPS_TOLERANCE:
             problems.append(
                 f"{label} camera holds only {both_fps:.1f} fps against a {TARGET_FPS} fps target "
@@ -280,7 +290,8 @@ def main() -> int:
             )
         if abs(results[both_key]["drift"]) > BRIGHTNESS_DRIFT_LIMIT:
             problems.append(
-                f"{label} camera brightness drifted {results[both_key]['drift']:+.1%} during the test - "
+                f"{label} camera brightness drifted "
+                f"{results[both_key]['drift']:+.1%} during the test - "
                 "auto-exposure is wandering and CANNOT be locked on macOS. Close blinds, "
                 "use steady artificial light, and keep it identical for eval."
             )

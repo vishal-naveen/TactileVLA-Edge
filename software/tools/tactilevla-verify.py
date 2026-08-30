@@ -9,13 +9,13 @@ nothing moves. Run it with both arms powered and both cameras connected:
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import sys
 from pathlib import Path
 
 import cv2
-
 from lerobot.motors import Motor, MotorNormMode
 from lerobot.motors.feetech import FeetechMotorsBus
 
@@ -134,10 +134,8 @@ def check_arm(label: str, port: str) -> bool:
                 if register == "Present_Load":
                     ok = False
     finally:
-        try:
+        with contextlib.suppress(Exception):
             bus.disconnect()
-        except Exception:
-            pass
     return ok
 
 

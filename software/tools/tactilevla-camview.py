@@ -30,7 +30,9 @@ import cv2
 CAMS_JSON = Path.home() / "tactilevla-cams.json"
 _cams = json.loads(CAMS_JSON.read_text())
 ROLE_OF = {_cams[role]["index"]: role for role in ("top", "wrist")}
-RECORD_RES = {_cams[role]["index"]: (_cams[role]["width"], _cams[role]["height"]) for role in ("top", "wrist")}
+RECORD_RES = {
+    _cams[role]["index"]: (_cams[role]["width"], _cams[role]["height"]) for role in ("top", "wrist")
+}
 FALLBACK_RES = (800, 600)
 CAP_FPS = 30
 
@@ -192,7 +194,11 @@ def main() -> int:
         cv2.resizeWindow(window, DISPLAY_WIDTH, int(DISPLAY_WIDTH * want_h / want_w))
         actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        note = "" if (actual_w, actual_h) == (want_w, want_h) else f"  <- NOT the requested {want_w}x{want_h}"
+        note = (
+            ""
+            if (actual_w, actual_h) == (want_w, want_h)
+            else f"  <- NOT the requested {want_w}x{want_h}"
+        )
         print(f"cam {index}: opened at {actual_w}x{actual_h}{note}")
 
     if not caps:
