@@ -5,9 +5,16 @@
 **A vision-language-action stack for contact-rich robot manipulation on sub-$300 hardware,
 working toward on-device tactile inference.**
 
+[![Interactive 3D demo](https://img.shields.io/badge/▶_Interactive_3D_demo-open_it-e8a33d?style=for-the-badge)](https://vishal-naveen.github.io/tactilevla-demo/)
+&nbsp;
 [![Project site](https://img.shields.io/badge/▶_Watch_the_runs-project_site-2f8f79?style=for-the-badge)](https://vishal-naveen.github.io/TactileVLA-Edge/)
 &nbsp;
 [![Results](https://img.shields.io/badge/Full_results_%26_protocol-docs%2Fresults.md-5c6a68?style=for-the-badge)](docs/results.md)
+
+<a href="https://vishal-naveen.github.io/tactilevla-demo/"><img src="docs/media/demo-preview.jpg" alt="The interactive 3D demo: a reconstructed SO-101 arm above the 3×3 task grid" width="820"></a>
+
+**[Open the interactive 3D demo](https://vishal-naveen.github.io/tactilevla-demo/)**: a guided tour of the whole project, the real runs, and a 3D arm you can
+send to any cell, including the held-out one. (The 3D arm is a kinematic reconstruction; the videos are the real runs.)
 
 ![ACT completing the task in a held-out workspace cell](docs/media/act-b2-heldout.gif)
 

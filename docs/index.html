@@ -83,6 +83,19 @@
   }
   .chip.on { color:var(--teal); border-color:var(--teal); }
   a.chip { text-decoration:none; }
+  .demo-card { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); gap:0; margin:0 0 34px;
+               background:var(--card); border:1px solid var(--rule); border-radius:10px; overflow:hidden;
+               box-shadow:var(--shadow); text-decoration:none; color:inherit; }
+  .demo-card img { display:block; width:100%; height:100%; object-fit:cover; }
+  .demo-card .demo-copy { padding:26px 28px; display:flex; flex-direction:column; justify-content:center; gap:10px; }
+  .demo-card h2 { margin:0; font-size:24px; line-height:1.2; letter-spacing:-0.01em; }
+  .demo-card p { margin:0; color:var(--slate); }
+  .demo-card .demo-btn { align-self:flex-start; margin-top:6px; padding:10px 18px; border-radius:999px;
+                         background:var(--amber); color:#14201f; font-weight:650; font-size:15px; }
+  .demo-card:hover { border-color:var(--amber); }
+  .demo-card:hover .demo-btn { filter:brightness(1.06); }
+  .demo-card:focus-visible { outline:2px solid var(--amber); outline-offset:3px; }
+  @media (max-width:720px) { .demo-card { grid-template-columns:1fr; } .demo-card .demo-copy { padding:20px; } }
   a.chip:hover { border-color:var(--ink); color:var(--ink); }
 
   section { margin-top:56px; }
@@ -163,9 +176,21 @@
     <div class="status">
       <span class="chip on">Phase 2 complete &mdash; vision-only baseline</span>
       <span class="chip">Phase 3 tactile &mdash; not built</span>
+      <a class="chip on" href="https://vishal-naveen.github.io/tactilevla-demo/">Interactive 3D demo</a>
       <a class="chip" href="https://github.com/vishal-naveen/TactileVLA-Edge">Source on GitHub</a>
     </div>
   </header>
+
+  <a class="demo-card" href="https://vishal-naveen.github.io/tactilevla-demo/">
+    <img src="media/demo-preview.jpg" alt="The interactive 3D demo: a reconstructed SO-101 arm above the 3&times;3 task grid" width="1200" height="630" loading="eager">
+    <div class="demo-copy">
+      <h2>See it in 3D</h2>
+      <p>A guided tour of the whole project: the setup, the held-out test, the real runs and the numbers.
+      Then send the arm to any cell yourself, B2 included.</p>
+      <p><small>The 3D arm is a kinematic reconstruction. The videos are the real runs.</small></p>
+      <span class="demo-btn">Open the interactive demo</span>
+    </div>
+  </a>
 
   <div class="hero">
     <figure>
